@@ -346,99 +346,6 @@ final class AIService {
             requestBody["generationConfig"] = config
         }
         
-        // Log full request body to debug logs if enabled (skip if already logged from generateFromMultiModal)
-        if AIDebugLogger.shared.isEnabled && !skipDebugLogging {
-            // Extract text prompt from parts
-            var promptText = ""
-            var mediaItems: [AIDebugMedia] = []
-            
-            for part in parts {
-                if let text = part["text"] as? String {
-                    promptText = text
-                } else if let inlineData = part["inlineData"] as? [String: Any],
-                          let mimeType = inlineData["mimeType"] as? String,
-                          let dataString = inlineData["data"] as? String {
-                    // Estimate size from base64 string
-                    let sizeBytes = dataString.count * 3 / 4
-                    let mediaType = mimeType.hasPrefix("image") ? "image" : 
-                                   (mimeType.hasPrefix("video") ? "video" : "audio")
-                    mediaItems.append(AIDebugMedia(
-                        type: mediaType,
-                        sizeBytes: sizeBytes,
-                        encoding: "base64",
-                        mimeType: mimeType,
-                        base64Data: dataString  // Store the actual base64 data
-                    ))
-                } else if let fileData = part["fileData"] as? [String: Any],
-                          let mimeType = fileData["mimeType"] as? String,
-                          let fileUri = fileData["fileUri"] as? String {
-                    let mediaType = mimeType.hasPrefix("image") ? "image" : 
-                                   (mimeType.hasPrefix("video") ? "video" : "audio")
-                    mediaItems.append(AIDebugMedia(
-                        type: mediaType,
-                        sizeBytes: 0, // Size unknown for uploaded files
-                        encoding: "file_upload: \(fileUri)",
-                        mimeType: mimeType,
-                        base64Data: nil  // No base64 data for uploaded files
-                    ))
-                }
-            }
-            
-            // Convert full request body to JSON string
-            var fullRequestBodyString: String?
-            if let jsonData = try? JSONSerialization.data(withJSONObject: requestBody, options: .prettyPrinted),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                // Truncate base64 data for readability in logs
-                var truncatedString = jsonString
-                // Match base64 strings longer than 100 chars in "data" fields
-                if let regex = try? NSRegularExpression(pattern: "\"data\"\\s*:\\s*\"[A-Za-z0-9+/=]{100,}\"", options: []) {
-                    let nsString = truncatedString as NSString
-                    truncatedString = regex.stringByReplacingMatches(
-                        in: truncatedString,
-                        options: [],
-                        range: NSRange(location: 0, length: nsString.length),
-                        withTemplate: "\"data\": \"[BASE64_DATA_TRUNCATED...]\""
-                    )
-                }
-                fullRequestBodyString = truncatedString
-            }
-            
-            // Convert generation config to JSON string
-            var fullGenerationConfigString: String?
-            if let config = generationConfig {
-                if let jsonData = try? JSONSerialization.data(withJSONObject: config, options: .prettyPrinted),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    fullGenerationConfigString = jsonString
-                }
-            }
-            
-            // Extract response schema if present
-            var responseSchemaString: String?
-            if let responseMimeType = generationConfig?["response_mime_type"] as? String,
-               responseMimeType == "application/json",
-               let responseSchema = generationConfig?["response_schema"] {
-                if let jsonData = try? JSONSerialization.data(withJSONObject: responseSchema, options: .prettyPrinted),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    responseSchemaString = jsonString
-                }
-            }
-            
-            let debugRequest = AIDebugRequest(
-                prompt: promptText,
-                model: configuration.modelName,
-                media: mediaItems.isEmpty ? nil : mediaItems,
-                temperature: generationConfig?["temperature"] as? Double,
-                maxTokens: generationConfig?["maxOutputTokens"] as? Int,
-                topP: generationConfig?["topP"] as? Double,
-                topK: generationConfig?["topK"] as? Int,
-                responseSchema: responseSchemaString,
-                fullGenerationConfig: fullGenerationConfigString,
-                fullRequestBody: fullRequestBodyString
-            )
-            
-            AIDebugLogger.shared.logRequest(debugRequest)
-        }
-        
         // Create request
         guard let url = buildURL() else {
             print("❌ [AIService] Invalid URL")
@@ -531,83 +438,8 @@ final class AIService {
         print("🤖 [AIService] generateFromMultiModal called")
         
         // Create debug request for logging
-        let requestStartTime = Date()
-        var debugMedia: [AIDebugMedia] = []
-        var debugRequest: AIDebugRequest?
-        
+        let requestStartTime = Date()        
         // Log request if debug logging is enabled
-        if AIDebugLogger.shared.isEnabled {
-            // Collect media information
-            if let image = imageData {
-                debugMedia.append(AIDebugMedia(
-                    type: "image",
-                    sizeBytes: image.data.count,
-                    encoding: "base64",
-                    mimeType: image.mimeType,
-                    base64Data: nil  // Don't store base64 in memory for debug logs
-                ))
-            }
-            if let video = videoData {
-                let fps = videoMetadata?.fps
-                debugMedia.append(AIDebugMedia(
-                    type: "video",
-                    sizeBytes: video.data.count,
-                    encoding: video.data.count > Constants.maxInlineDataSize ? "file_upload" : "base64",
-                    mimeType: video.mimeType,
-                    fps: fps,
-                    base64Data: nil  // Don't store base64 in memory for debug logs
-                ))
-            }
-            if let audio = audioData {
-                debugMedia.append(AIDebugMedia(
-                    type: "audio",
-                    sizeBytes: audio.data.count,
-                    encoding: "base64",
-                    mimeType: audio.mimeType,
-                    base64Data: nil  // Don't store base64 in memory for debug logs
-                ))
-            }
-            
-            // Extract generation config parameters
-            let temp = generationConfig?["temperature"] as? Double
-            let maxTokens = generationConfig?["maxOutputTokens"] as? Int
-            let topP = generationConfig?["topP"] as? Double
-            let topK = generationConfig?["topK"] as? Int
-            
-            // Convert generation config to JSON string for full capture
-            var fullGenerationConfigString: String?
-            if let config = generationConfig {
-                if let jsonData = try? JSONSerialization.data(withJSONObject: config, options: .prettyPrinted),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    fullGenerationConfigString = jsonString
-                }
-            }
-            
-            // Extract response schema if present
-            var responseSchemaString: String?
-            if let responseMimeType = generationConfig?["response_mime_type"] as? String,
-               responseMimeType == "application/json",
-               let responseSchema = generationConfig?["response_schema"] {
-                if let jsonData = try? JSONSerialization.data(withJSONObject: responseSchema, options: .prettyPrinted),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    responseSchemaString = jsonString
-                }
-            }
-            
-            // Store initial request info but don't log yet
-            debugRequest = AIDebugRequest(
-                prompt: prompt,
-                model: configuration.modelName,
-                media: debugMedia.isEmpty ? nil : debugMedia,
-                temperature: temp,
-                maxTokens: maxTokens,
-                topP: topP,
-                topK: topK,
-                responseSchema: responseSchemaString,
-                fullGenerationConfig: fullGenerationConfigString,
-                fullRequestBody: nil // Will be set later with complete body
-            )
-        }
         
         var parts: [[String: Any]] = []
         let group = DispatchGroup()
@@ -718,88 +550,9 @@ final class AIService {
                 ]
                 
                 // Now build the full request body for debug logging
-                if AIDebugLogger.shared.isEnabled, var request = debugRequest {
-                    // Build the complete request body structure
-                    var requestBody: [String: Any] = [
-                        "contents": [
-                            [
-                                "role": "user",
-                                "parts": parts
-                            ]
-                        ]
-                    ]
-                    
-                    requestBody["generationConfig"] = config
-                    
-                    // Convert to JSON string
-                    var fullRequestBodyString: String?
-                    if let jsonData = try? JSONSerialization.data(withJSONObject: requestBody, options: .prettyPrinted),
-                       let jsonString = String(data: jsonData, encoding: .utf8) {
-                        // Truncate base64 data for readability in logs
-                        var truncatedString = jsonString
-                        if let regex = try? NSRegularExpression(pattern: "\"data\"\\s*:\\s*\"[A-Za-z0-9+/=]{100,}\"", options: []) {
-                            truncatedString = regex.stringByReplacingMatches(
-                                in: truncatedString,
-                                options: [],
-                                range: NSRange(location: 0, length: truncatedString.count),
-                                withTemplate: "\"data\": \"[BASE64_DATA_TRUNCATED...]\""
-                            )
-                        }
-                        fullRequestBodyString = truncatedString
-                        print("📋 [AIService] Full request body captured, length: \(truncatedString.count)")
-                    } else {
-                        print("❌ [AIService] Failed to serialize request body to JSON")
-                    }
-                    
-                    // Update request with full body
-                    request = AIDebugRequest(
-                        prompt: request.prompt,
-                        systemPrompt: nil,  // Could extract from system instructions if using them
-                        model: request.model,
-                        parameters: ["endpoint": self.buildURL()?.absoluteString ?? "unknown"],
-                        media: request.media,
-                        tokenEstimate: nil,
-                        temperature: request.temperature,
-                        maxTokens: request.maxTokens,
-                        topP: request.topP,
-                        topK: request.topK,
-                        responseSchema: request.responseSchema,
-                        fullGenerationConfig: request.fullGenerationConfig,
-                        playerProfile: nil,  // Could be added if context includes player data
-                        fullRequestBody: fullRequestBodyString
-                    )
-                    
-                    print("📝 [AIService] Logging request with full body: \(fullRequestBodyString?.prefix(100) ?? "nil")")
-                    AIDebugLogger.shared.logRequest(request)
-                    debugRequest = request
-                }
                 
                 self.generateContent(parts: parts, generationConfig: config, skipDebugLogging: true) { result in
                     // Log response if debug logging is enabled
-                    if AIDebugLogger.shared.isEnabled, let request = debugRequest {
-                        let duration = Date().timeIntervalSince(requestStartTime)
-                        
-                        switch result {
-                        case .success(let response):
-                            print("✅ [AIService] generateContent succeeded")
-                            let debugResponse = AIDebugResponse(
-                                text: response,
-                                tokenUsage: TokenUsage(promptTokens: 0, completionTokens: 0), // Would need actual token counts from API
-                                modelVersion: self.configuration.modelName
-                            )
-                            AIDebugLogger.shared.updateLogWithResponse(request.id, response: debugResponse, duration: duration)
-                        case .failure(let error):
-                            print("❌ [AIService] generateContent failed: \(error)")
-                            AIDebugLogger.shared.updateLogWithError(request.id, error: error, duration: duration)
-                        }
-                    } else {
-                        switch result {
-                        case .success(_):
-                            print("✅ [AIService] generateContent succeeded")
-                        case .failure(let error):
-                            print("❌ [AIService] generateContent failed: \(error)")
-                        }
-                    }
                     completion(result)
                 }
             }
@@ -823,66 +576,8 @@ final class AIService {
         print("🤖 [AIService] generateFromMultipleVideos called with \(videoDataArray.count) videos")
         
         // Create debug request for logging
-        let requestStartTime = Date()
-        var debugMedia: [AIDebugMedia] = []
-        var debugRequest: AIDebugRequest?
-        
+        let requestStartTime = Date()        
         // Log request if debug logging is enabled
-        if AIDebugLogger.shared.isEnabled {
-            // Collect media information for all videos
-            for (index, video) in videoDataArray.enumerated() {
-                let metadata = index < videoMetadataArray.count ? videoMetadataArray[index] : nil
-                let fps = metadata?.fps
-                debugMedia.append(AIDebugMedia(
-                    type: "video",
-                    sizeBytes: video.data.count,
-                    encoding: video.data.count > Constants.maxInlineDataSize ? "file_upload" : "base64",
-                    mimeType: video.mimeType,
-                    fps: fps,
-                    base64Data: nil  // Don't store base64 in memory for debug logs
-                ))
-            }
-            
-            // Extract generation config parameters
-            let temp = generationConfig?["temperature"] as? Double
-            let maxTokens = generationConfig?["maxOutputTokens"] as? Int
-            let topP = generationConfig?["topP"] as? Double
-            let topK = generationConfig?["topK"] as? Int
-            
-            // Convert generation config to JSON string for full capture
-            var fullGenerationConfigString: String?
-            if let config = generationConfig {
-                if let jsonData = try? JSONSerialization.data(withJSONObject: config, options: .prettyPrinted),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    fullGenerationConfigString = jsonString
-                }
-            }
-            
-            // Extract response schema if present
-            var responseSchemaString: String?
-            if let responseMimeType = generationConfig?["response_mime_type"] as? String,
-               responseMimeType == "application/json",
-               let responseSchema = generationConfig?["response_schema"] {
-                if let jsonData = try? JSONSerialization.data(withJSONObject: responseSchema, options: .prettyPrinted),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    responseSchemaString = jsonString
-                }
-            }
-            
-            // Store initial request info but don't log yet
-            debugRequest = AIDebugRequest(
-                prompt: prompt,
-                model: configuration.modelName,
-                media: debugMedia.isEmpty ? nil : debugMedia,
-                temperature: temp,
-                maxTokens: maxTokens,
-                topP: topP,
-                topK: topK,
-                responseSchema: responseSchemaString,
-                fullGenerationConfig: fullGenerationConfigString,
-                fullRequestBody: nil // Will be set later with complete body
-            )
-        }
         
         var parts: [[String: Any]] = []
         let group = DispatchGroup()
@@ -973,73 +668,6 @@ final class AIService {
             // Now generate content with all parts
             self.generateContent(parts: parts, generationConfig: generationConfig, skipDebugLogging: true) { result in
                 // Handle debug logging with full request body if enabled and we have the debug request
-                if AIDebugLogger.shared.isEnabled, let debugReq = debugRequest {
-                    // Create the full request body structure for debugging
-                    let requestBody: [String: Any] = [
-                        "contents": [
-                            [
-                                "parts": parts
-                            ]
-                        ],
-                        "generationConfig": generationConfig ?? [:]
-                    ]
-                    
-                    // Convert to JSON string and create new debug request with full body
-                    var fullRequestBodyString: String?
-                    if let jsonData = try? JSONSerialization.data(withJSONObject: requestBody, options: .prettyPrinted),
-                       let jsonString = String(data: jsonData, encoding: .utf8) {
-                        fullRequestBodyString = jsonString
-                        print("📋 [AIService] Captured full multi-video request body: \(jsonString.count) chars")
-                    }
-                    
-                    // Create updated debug request with full body
-                    let updatedDebugReq = AIDebugRequest(
-                        prompt: debugReq.prompt,
-                        systemPrompt: debugReq.systemPrompt,
-                        model: debugReq.model,
-                        parameters: debugReq.parameters,
-                        media: debugReq.media,
-                        tokenEstimate: debugReq.tokenEstimate,
-                        temperature: debugReq.temperature,
-                        maxTokens: debugReq.maxTokens,
-                        topP: debugReq.topP,
-                        topK: debugReq.topK,
-                        responseSchema: debugReq.responseSchema,
-                        fullGenerationConfig: debugReq.fullGenerationConfig,
-                        playerProfile: debugReq.playerProfile,
-                        fullRequestBody: fullRequestBodyString
-                    )
-                    
-                    // Log the request with full body
-                    AIDebugLogger.shared.logRequest(updatedDebugReq)
-                    
-                    // Handle response logging
-                    let processingTime = Date().timeIntervalSince(requestStartTime)
-                    switch result {
-                    case .success(let response):
-                        // For now, create a basic token usage estimate
-                        let promptLength = prompt.count
-                        let responseLength = response.count
-                        let estimatedPromptTokens = promptLength / 4  // Rough estimate
-                        let estimatedResponseTokens = responseLength / 4  // Rough estimate
-                        
-                        let tokenUsage = TokenUsage(
-                            promptTokens: estimatedPromptTokens,
-                            completionTokens: estimatedResponseTokens
-                        )
-                        
-                        let debugResponse = AIDebugResponse(
-                            text: response,
-                            tokenUsage: tokenUsage,
-                            processingTime: processingTime
-                        )
-                        
-                        AIDebugLogger.shared.updateLogWithResponse(updatedDebugReq.id, response: debugResponse, duration: processingTime)
-                        
-                    case .failure(let error):
-                        AIDebugLogger.shared.updateLogWithError(updatedDebugReq.id, error: error, duration: processingTime)
-                    }
-                }
                 
                 // Log result
                 switch result {

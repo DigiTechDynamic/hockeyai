@@ -9,9 +9,6 @@ struct HockeyMainView: View {
     @StateObject private var monetization = MonetizationManager.shared
     @State private var selectedTab = 0
     @State private var showSettings = false
-    @State private var showNewSession = false
-    @State private var showQuickAction = false
-    @State private var quickActionType: QuickActionType = .log
     @State private var previousTab = 0
     @State private var profileImage: UIImage?
     @State private var showSoftUpsell = false
@@ -50,24 +47,6 @@ struct HockeyMainView: View {
             .environmentObject(themeManager)
             .environmentObject(authManager)
         }
-        .sheet(isPresented: $showNewSession) {
-            FlowStepContainer(
-                title: "New Training Session",
-                onDismiss: { showNewSession = false }
-            ) {
-                NewSessionView()
-            } bottomContent: {
-                EmptyView()
-            }
-        }
-        .overlay(
-            InteractivePanelContainer(
-                isPresented: $showQuickAction,
-                title: quickActionTitle
-            ) {
-                quickActionContent
-            }
-        )
         .onAppear {
             loadProfileImage()
             checkForTeamSelector()
@@ -96,7 +75,6 @@ struct HockeyMainView: View {
             selectedTab: $selectedTab,
             tabs: [
                 AppTab(title: "Home", icon: "house", selectedIcon: "house.fill"),
-                // AppTab(title: "Train", icon: "figure.walk", selectedIcon: "figure.walk"),
                 AppTab(title: "AI Coach", icon: "brain", selectedIcon: "brain"),
                 AppTab(title: "Equipment", icon: "hockey.puck", selectedIcon: "hockey.puck.fill")
             ]
@@ -208,32 +186,6 @@ struct HockeyMainView: View {
         return "go_pro_header"
     }
     
-    private var quickActionTitle: String {
-        switch quickActionType {
-        case .log: return "Quick Log"
-        case .timer: return "Training Timer"
-        case .record: return "Record Shot"
-        case .ai: return "AI Coach Tips"
-        }
-    }
-    
-    @ViewBuilder
-    private var quickActionContent: some View {
-        switch quickActionType {
-        case .log:
-            QuickLogView()
-        case .timer:
-            QuickTimerView()
-        case .record:
-            QuickRecordView()
-        case .ai:
-            QuickAITipsView()
-        }
-    }
-    
-    enum QuickActionType {
-        case log, timer, record, ai
-    }
     
     // MARK: - Load Profile Image
     private func loadProfileImage() {
@@ -260,60 +212,3 @@ struct HockeyMainView: View {
     }
 }
 
-// MARK: - Placeholder Views
-struct NewSessionView: View {
-    @Environment(\.theme) var theme
-    var body: some View {
-        VStack(spacing: theme.spacing.lg) {
-            Text("Start New Training Session")
-                .font(.title2)
-                .foregroundColor(theme.text)
-            
-            // Session setup content would go here
-        }
-    }
-}
-
-struct QuickLogView: View {
-    @Environment(\.theme) var theme
-    var body: some View {
-        VStack(spacing: theme.spacing.md) {
-            Text("Log your activity")
-                .font(.headline)
-                .foregroundColor(theme.text)
-        }
-    }
-}
-
-struct QuickTimerView: View {
-    @Environment(\.theme) var theme
-    var body: some View {
-        VStack(spacing: theme.spacing.md) {
-            Text("Training Timer")
-                .font(.headline)
-                .foregroundColor(theme.text)
-        }
-    }
-}
-
-struct QuickRecordView: View {
-    @Environment(\.theme) var theme
-    var body: some View {
-        VStack(spacing: theme.spacing.md) {
-            Text("Record your shot")
-                .font(.headline)
-                .foregroundColor(theme.text)
-        }
-    }
-}
-
-struct QuickAITipsView: View {
-    @Environment(\.theme) var theme
-    var body: some View {
-        VStack(spacing: theme.spacing.md) {
-            Text("AI Coach is analyzing...")
-                .font(.headline)
-                .foregroundColor(theme.text)
-        }
-    }
-}

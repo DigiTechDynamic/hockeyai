@@ -10,9 +10,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Configure notifications - ONE LINE! That's it!
         NotificationKit.configure()
 
-        // Bootstrap training-notification campaigns (schedules rolling horizon)
-        TrainingNotificationCampaigns.shared.bootstrap()
-
         // Clear badge on app launch
         UIApplication.shared.applicationIconBadgeNumber = 0
 
@@ -54,8 +51,5 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 "is_premium": false // Will be updated by MonetizationManager
             ]
         )
-
-        // Record session + refresh rolling schedule
-        TrainingNotificationCampaigns.shared.onAppOpen()
     }
 }

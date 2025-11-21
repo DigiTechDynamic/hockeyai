@@ -1,9 +1,6 @@
 import SwiftUI
 import UIKit
 
-// Import ShareKit for streamlined sharing
-// All share functionality is now handled by the ShareKit module
-
 // MARK: - Rating Results View (Face-aware, modern)
 struct RatingResultsView: View {
     @Environment(\.theme) var theme
@@ -79,22 +76,6 @@ struct RatingResultsView: View {
                             }
                         }
 
-                        // ✨ SHARE BUTTON (During onboarding - primary viral growth driver)
-                        // Simple text-only sharing with app link
-                        /*
-                        if viewModel.context == .onboarding {
-                            ShareButton(
-                                content: ShareContent(
-                                    type: .styCheck,
-                                    score: nil,  // No score for onboarding validation message
-                                    title: nil,  // No title needed
-                                    comment: rating.aiComment
-                                ),
-                                style: .primary
-                            )
-                            .padding(.top, theme.spacing.lg)
-                        }
-                        */
 
                         // Premium Intangibles Card (HIDDEN during onboarding - keep flow tight for launch)
                         if viewModel.context != .onboarding {
@@ -203,7 +184,4 @@ struct RatingResultsView: View {
         RunLoop.main.add(scoreTimer!, forMode: .common)
     }
 
-    // MARK: - Share functionality is now handled by ShareKit
-    // All share logic has been extracted to the ShareKit module for reusability
-    // See: /Modules/ShareKit/
 }
