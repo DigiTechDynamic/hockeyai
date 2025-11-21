@@ -1,0 +1,550 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3441670C2EB02B46004E0706 /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 3441670B2EB02B46004E0706 /* Mixpanel */; };
+		3441670F2EB02DDF004E0706 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3441670E2EB02DDF004E0706 /* RevenueCat */; };
+		3476321C2E80D2F7001D8372 /* InAppPurchase.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3476321B2E80D2F7001D8372 /* InAppPurchase.storekit */; };
+		3495A4D12EB028E900D8C7DE /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 3495A4D02EB028E900D8C7DE /* FirebaseAnalytics */; };
+		3495A4D32EB028E900D8C7DE /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3495A4D22EB028E900D8C7DE /* FirebaseAnalyticsCore */; };
+		3495A4D52EB028E900D8C7DE /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = 3495A4D42EB028E900D8C7DE /* FirebaseAnalyticsIdentitySupport */; };
+		3495A4D72EB028E900D8C7DE /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3495A4D62EB028E900D8C7DE /* FirebaseAuth */; };
+		3495A4D92EB028E900D8C7DE /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 3495A4D82EB028E900D8C7DE /* FirebaseCrashlytics */; };
+		3495A4DB2EB028E900D8C7DE /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 3495A4DA2EB028E900D8C7DE /* FirebaseRemoteConfig */; };
+		34A79A202E80E82800022DEB /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 34A79A1F2E80E82800022DEB /* RevenueCat */; };
+		34A79A232E80E8A000022DEB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 34A79A222E80E8A000022DEB /* GoogleSignIn */; };
+		34A79C1C2E80EB9A00022DEB /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 34A79C1B2E80EB9A00022DEB /* Mixpanel */; };
+		34A79C1F2E80EC4000022DEB /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 34A79C1E2E80EC4000022DEB /* FirebaseAuth */; };
+		34A79C212E80EC4000022DEB /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 34A79C202E80EC4000022DEB /* FirebaseAuthCombine-Community */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		340BA2B32DEAA30B00D8ACDC /* HockeyApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HockeyApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3476321B2E80D2F7001D8372 /* InAppPurchase.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = InAppPurchase.storekit; sourceTree = "<group>"; };
+		34C1EB5B2E00E19800AF2FC0 /* GDTCCTWatchOSTestApp.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = GDTCCTWatchOSTestApp.xcodeproj; sourceTree = "<group>"; };
+		34C1EC142E00E19800AF2FC0 /* GDTWatchOSTestApp.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = GDTWatchOSTestApp.xcodeproj; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		340BA44C2DEAB9C100D8ACDC /* Exceptions for "hockeyApp" folder in "HockeyApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = 340BA2B22DEAA30B00D8ACDC /* HockeyApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		340BA2B52DEAA30B00D8ACDC /* hockeyApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				340BA44C2DEAB9C100D8ACDC /* Exceptions for "hockeyApp" folder in "HockeyApp" target */,
+			);
+			path = hockeyApp;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		340BA2B02DEAA30B00D8ACDC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3495A4DB2EB028E900D8C7DE /* FirebaseRemoteConfig in Frameworks */,
+				3495A4D52EB028E900D8C7DE /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				34A79C1C2E80EB9A00022DEB /* Mixpanel in Frameworks */,
+				34A79A202E80E82800022DEB /* RevenueCat in Frameworks */,
+				3495A4D12EB028E900D8C7DE /* FirebaseAnalytics in Frameworks */,
+				3495A4D72EB028E900D8C7DE /* FirebaseAuth in Frameworks */,
+				3441670C2EB02B46004E0706 /* Mixpanel in Frameworks */,
+				34A79A232E80E8A000022DEB /* GoogleSignIn in Frameworks */,
+				34A79C1F2E80EC4000022DEB /* FirebaseAuth in Frameworks */,
+				3441670F2EB02DDF004E0706 /* RevenueCat in Frameworks */,
+				3495A4D92EB028E900D8C7DE /* FirebaseCrashlytics in Frameworks */,
+				3495A4D32EB028E900D8C7DE /* FirebaseAnalyticsCore in Frameworks */,
+				34A79C212E80EC4000022DEB /* FirebaseAuthCombine-Community in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		340BA2AA2DEAA30B00D8ACDC = {
+			isa = PBXGroup;
+			children = (
+				3476321B2E80D2F7001D8372 /* InAppPurchase.storekit */,
+				340BA2B52DEAA30B00D8ACDC /* hockeyApp */,
+				340BA30F2DEAAA1D00D8ACDC /* Frameworks */,
+				340BA2B42DEAA30B00D8ACDC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		340BA2B42DEAA30B00D8ACDC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				340BA2B32DEAA30B00D8ACDC /* HockeyApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		340BA30F2DEAAA1D00D8ACDC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		34C1EBAB2E00E19800AF2FC0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		34C1EC2A2E00E19800AF2FC0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		340BA2B22DEAA30B00D8ACDC /* HockeyApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 340BA2C22DEAA30C00D8ACDC /* Build configuration list for PBXNativeTarget "HockeyApp" */;
+			buildPhases = (
+				340BA2AF2DEAA30B00D8ACDC /* Sources */,
+				340BA2B02DEAA30B00D8ACDC /* Frameworks */,
+				340BA2B12DEAA30B00D8ACDC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				340BA2B52DEAA30B00D8ACDC /* hockeyApp */,
+			);
+			name = HockeyApp;
+			packageProductDependencies = (
+				34A79A1F2E80E82800022DEB /* RevenueCat */,
+				34A79A222E80E8A000022DEB /* GoogleSignIn */,
+				34A79C1B2E80EB9A00022DEB /* Mixpanel */,
+				34A79C1E2E80EC4000022DEB /* FirebaseAuth */,
+				34A79C202E80EC4000022DEB /* FirebaseAuthCombine-Community */,
+				3495A4D02EB028E900D8C7DE /* FirebaseAnalytics */,
+				3495A4D22EB028E900D8C7DE /* FirebaseAnalyticsCore */,
+				3495A4D42EB028E900D8C7DE /* FirebaseAnalyticsIdentitySupport */,
+				3495A4D62EB028E900D8C7DE /* FirebaseAuth */,
+				3495A4D82EB028E900D8C7DE /* FirebaseCrashlytics */,
+				3495A4DA2EB028E900D8C7DE /* FirebaseRemoteConfig */,
+				3441670B2EB02B46004E0706 /* Mixpanel */,
+				3441670E2EB02DDF004E0706 /* RevenueCat */,
+			);
+			productName = HockeyApp;
+			productReference = 340BA2B32DEAA30B00D8ACDC /* HockeyApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		340BA2AB2DEAA30B00D8ACDC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					340BA2B22DEAA30B00D8ACDC = {
+						CreatedOnToolsVersion = 16.2;
+					};
+				};
+			};
+			buildConfigurationList = 340BA2AE2DEAA30B00D8ACDC /* Build configuration list for PBXProject "HockeyApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 340BA2AA2DEAA30B00D8ACDC;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				34A79A212E80E8A000022DEB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				3441670A2EB02B46004E0706 /* XCRemoteSwiftPackageReference "mixpanel-swift" */,
+				3441670D2EB02DDF004E0706 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 340BA2B42DEAA30B00D8ACDC /* Products */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 34C1EBAB2E00E19800AF2FC0 /* Products */;
+					ProjectRef = 34C1EB5B2E00E19800AF2FC0 /* GDTCCTWatchOSTestApp.xcodeproj */;
+				},
+				{
+					ProductGroup = 34C1EC2A2E00E19800AF2FC0 /* Products */;
+					ProjectRef = 34C1EC142E00E19800AF2FC0 /* GDTWatchOSTestApp.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				340BA2B22DEAA30B00D8ACDC /* HockeyApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		340BA2B12DEAA30B00D8ACDC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3476321C2E80D2F7001D8372 /* InAppPurchase.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		340BA2AF2DEAA30B00D8ACDC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		340BA2C02DEAA30C00D8ACDC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		340BA2C12DEAA30C00D8ACDC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		340BA2C32DEAA30C00D8ACDC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = hockeyApp/Resources/hockeyapp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "\"hockeyApp/Resources/Preview Content\"";
+				DEVELOPMENT_TEAM = 532Z6HQ3Q2;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = "*.md";
+				INFOPLIST_FILE = hockeyApp/Resources/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to take photos and record videos for AI analysis.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs access to your microphone to record audio for AI analysis.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to select photos and videos for AI analysis.";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
+				MARKETING_VERSION = 1.01;
+				PRODUCT_BUNDLE_IDENTIFIER = com.digitechdynamics.hockeyapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 2.2;
+			};
+			name = Debug;
+		};
+		340BA2C42DEAA30C00D8ACDC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = hockeyApp/Resources/hockeyapp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "\"hockeyApp/Resources/Preview Content\"";
+				DEVELOPMENT_TEAM = 532Z6HQ3Q2;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = "*.md";
+				INFOPLIST_FILE = hockeyApp/Resources/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to take photos and record videos for AI analysis.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs access to your microphone to record audio for AI analysis.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to select photos and videos for AI analysis.";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
+				MARKETING_VERSION = 1.01;
+				PRODUCT_BUNDLE_IDENTIFIER = com.digitechdynamics.hockeyapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 2.2;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		340BA2AE2DEAA30B00D8ACDC /* Build configuration list for PBXProject "HockeyApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				340BA2C02DEAA30C00D8ACDC /* Debug */,
+				340BA2C12DEAA30C00D8ACDC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		340BA2C22DEAA30C00D8ACDC /* Build configuration list for PBXNativeTarget "HockeyApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				340BA2C32DEAA30C00D8ACDC /* Debug */,
+				340BA2C42DEAA30C00D8ACDC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3441670A2EB02B46004E0706 /* XCRemoteSwiftPackageReference "mixpanel-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mixpanel/mixpanel-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		3441670D2EB02DDF004E0706 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.45.0;
+			};
+		};
+		3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.4.0;
+			};
+		};
+		34A79A212E80E8A000022DEB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3441670B2EB02B46004E0706 /* Mixpanel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3441670A2EB02B46004E0706 /* XCRemoteSwiftPackageReference "mixpanel-swift" */;
+			productName = Mixpanel;
+		};
+		3441670E2EB02DDF004E0706 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3441670D2EB02DDF004E0706 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		3495A4D02EB028E900D8C7DE /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		3495A4D22EB028E900D8C7DE /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		3495A4D42EB028E900D8C7DE /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		3495A4D62EB028E900D8C7DE /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		3495A4D82EB028E900D8C7DE /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		3495A4DA2EB028E900D8C7DE /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3495A4CF2EB028E900D8C7DE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
+		34A79A1F2E80E82800022DEB /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RevenueCat;
+		};
+		34A79A222E80E8A000022DEB /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 34A79A212E80E8A000022DEB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		34A79C1B2E80EB9A00022DEB /* Mixpanel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Mixpanel;
+		};
+		34A79C1E2E80EC4000022DEB /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FirebaseAuth;
+		};
+		34A79C202E80EC4000022DEB /* FirebaseAuthCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "FirebaseAuthCombine-Community";
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 340BA2AB2DEAA30B00D8ACDC /* Project object */;
+}

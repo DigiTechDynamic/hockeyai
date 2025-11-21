@@ -1,0 +1,430 @@
+import SwiftUI
+
+// MARK: - Sheet Container
+public struct SheetContainer<Content: View>: View {
+    @Environment(\.theme) var theme
+    @EnvironmentObject var themeManager: ThemeManager
+    @State private var glowOffset1: CGFloat = -200
+    @State private var glowOffset2: CGFloat = 200
+    @State private var showDebugCenter = false
+    let title: String
+    let onDismiss: () -> Void
+    let content: Content
+    
+    public init(
+        title: String,
+        onDismiss: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.onDismiss = onDismiss
+        self.content = content()
+    }
+    
+    public var body: some View {
+        ZStack {
+            // Full animated background matching HockeyAppShellView
+            backgroundWithGlowEffects
+            
+            VStack(spacing: 0) {
+            // Profile Header - matching Home page style exactly
+            VStack(spacing: 0) {
+                HStack {
+                    // Logo and Title matching Home header
+                    HStack(spacing: 12) {
+                        // Profile icon button - same size as close button
+                        ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                theme.primary.opacity(0.15),
+                                                theme.primary.opacity(0.05)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 42, height: 42)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(theme.primary.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .shadow(color: theme.primary.opacity(0.2), radius: 8, x: 0, y: 2)
+                                
+                                Image(systemName: "person.circle.fill")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(theme.primary)
+                            }
+                            
+                            Text("Profile")
+                                .font(.system(size: 22, weight: .black))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white,
+                                            Color.white.opacity(0.9)
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .shadow(color: Color.white.opacity(0.3), radius: 0, x: 0, y: 0)
+                                .shadow(color: Color.white.opacity(0.2), radius: 4, x: 0, y: 0)
+                                .shadow(color: theme.primary.opacity(0.3), radius: 8, x: 0, y: 2)
+                        }
+
+                        Spacer()
+
+                        // Debug button (only for Profile)
+                        #if DEBUG
+                        if title == "Profile" {
+                            Button(action: { showDebugCenter = true }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.orange.opacity(0.15),
+                                                    Color.orange.opacity(0.05)
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 42, height: 42)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                        )
+                                        .shadow(color: Color.orange.opacity(0.2), radius: 8, x: 0, y: 2)
+
+                                    Image(systemName: "hammer.circle.fill")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                            .padding(.trailing, 8)
+                        }
+                        #endif
+
+                        // Close button
+                        Button(action: onDismiss) {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                theme.primary.opacity(0.15),
+                                                theme.primary.opacity(0.05)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 42, height: 42)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(theme.primary.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .shadow(color: theme.primary.opacity(0.2), radius: 8, x: 0, y: 2)
+                                
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(theme.primary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        ZStack {
+                            // Glass morphism background matching Home
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                            
+                            // Gradient overlay
+                            LinearGradient(
+                                colors: [
+                                    theme.surface.opacity(0.9),
+                                    theme.background.opacity(0.7)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                        .ignoresSafeArea(edges: .top)
+                    )
+                    
+                    // Subtle separator line - exactly like Home
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    theme.primary.opacity(0),
+                                    theme.primary.opacity(0.3),
+                                    theme.primary.opacity(0)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(height: 1)
+                }
+                
+                // Content - No extra ScrollView since ProfileSettingsView already has one
+                content
+            }
+        }
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $showDebugCenter) {
+            DebugTabView()
+        }
+        .onAppear {
+            glowOffset1 = theme.spacing.xxl * 4 // 200
+            glowOffset2 = -(theme.spacing.xxl * 4) // -200
+        }
+    }
+    
+    private var backgroundWithGlowEffects: some View {
+        ZStack {
+            // Theme-aware background
+            theme.background
+                .ignoresSafeArea()
+            
+            // Theme-aware texture overlay for depth
+            theme.backgroundGradient
+                .ignoresSafeArea()
+                .opacity(0.8)
+            
+            // Theme-specific glow effects based on current theme ID
+            if themeManager.getCurrentThemeId() == "sty" {
+                // STY theme glow effects - subtle neon green glows
+                Circle()
+                    .fill(theme.primary.opacity(0.3))
+                    .frame(width: theme.spacing.xxl * 8, height: theme.spacing.xxl * 8) // 400
+                    .blur(radius: theme.spacing.xxl * 2.5) // 120
+                    .offset(x: glowOffset1, y: -(theme.spacing.xxl * 2)) // -100
+                    .animation(
+                        Animation.easeInOut(duration: 12)
+                            .repeatForever(autoreverses: true),
+                        value: glowOffset1
+                    )
+                
+                Circle()
+                    .fill(theme.accent.opacity(0.2))
+                    .frame(width: theme.spacing.xxl * 6, height: theme.spacing.xxl * 6) // 300
+                    .blur(radius: theme.spacing.xxl * 2) // 100
+                    .offset(x: glowOffset2, y: theme.spacing.xxl * 4) // 200
+                    .animation(
+                        Animation.easeInOut(duration: 15)
+                            .repeatForever(autoreverses: true),
+                        value: glowOffset2
+                    )
+            } else if themeManager.getCurrentThemeId() == "quantum" {
+                // Quantum theme glow effects - glass morphism effects
+                Circle()
+                    .fill(theme.primary.opacity(0.2))
+                    .frame(width: theme.spacing.xxl * 10, height: theme.spacing.xxl * 10) // 500
+                    .blur(radius: theme.spacing.xxl * 3) // 150
+                    .offset(x: glowOffset1, y: 0)
+                    .animation(
+                        Animation.easeInOut(duration: 20)
+                            .repeatForever(autoreverses: true),
+                        value: glowOffset1
+                    )
+                
+                Circle()
+                    .fill(theme.accent.opacity(0.15))
+                    .frame(width: theme.spacing.xxl * 8, height: theme.spacing.xxl * 8) // 400
+                    .blur(radius: theme.spacing.xxl * 2.5) // 120
+                    .offset(x: glowOffset2, y: theme.spacing.xxl * 2) // 100
+                    .animation(
+                        Animation.easeInOut(duration: 18)
+                            .repeatForever(autoreverses: true),
+                        value: glowOffset2
+                    )
+            }
+        }
+    }
+}
+
+// MARK: - Flow Step Container
+public struct FlowStepContainer<Content: View, Bottom: View>: View {
+    @Environment(\.theme) var theme
+    let title: String
+    let showDismiss: Bool
+    let onDismiss: (() -> Void)?
+    let content: Content
+    let bottomContent: Bottom?
+    
+    public init(
+        title: String,
+        showDismiss: Bool = true,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder bottomContent: () -> Bottom? = { nil }
+    ) {
+        self.title = title
+        self.showDismiss = showDismiss
+        self.onDismiss = onDismiss
+        self.content = content()
+        self.bottomContent = bottomContent()
+    }
+    
+    public var body: some View {
+        ZStack {
+            // Clean black background
+            Color.black
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    Text(title)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(theme.text)
+                    
+                    Spacer()
+                    
+                    if showDismiss, let onDismiss = onDismiss {
+                        AppCloseButton(action: onDismiss)
+                    }
+                }
+                .padding(.horizontal, theme.spacing.lg)
+                .padding(.top, theme.spacing.lg)
+                .padding(.bottom, theme.spacing.sm)
+                
+                // Content
+                ScrollView {
+                    content
+                        .padding(theme.spacing.lg)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                // Bottom content
+                if let bottomContent = bottomContent {
+                    VStack {
+                        bottomContent
+                    }
+                    .padding(theme.spacing.lg)
+                    .background(
+                        Rectangle()
+                            .fill(theme.surface.opacity(0.9))
+                            .background(.ultraThinMaterial)
+                            .ignoresSafeArea(edges: .bottom)
+                    )
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+// MARK: - Interactive Panel Container
+public struct InteractivePanelContainer<Content: View>: View {
+    @Environment(\.theme) var theme
+    @Binding var isPresented: Bool
+    let title: String
+    let content: Content
+    
+    @State private var dragOffset: CGSize = .zero
+    @State private var isDragging = false
+    
+    public init(
+        isPresented: Binding<Bool>,
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) {
+        self._isPresented = isPresented
+        self.title = title
+        self.content = content()
+    }
+    
+    public var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                // Background overlay
+                if isPresented {
+                    theme.background.opacity(0.7)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.spring()) {
+                                isPresented = false
+                            }
+                        }
+                        .transition(.opacity)
+                }
+                
+                // Panel
+                if isPresented {
+                    VStack(spacing: 0) {
+                        // Drag indicator
+                        Capsule()
+                            .fill(theme.textSecondary)
+                            .frame(width: theme.spacing.xl - theme.spacing.xs, height: theme.spacing.xs) // 40, 4
+                            .padding(.top, theme.spacing.sm)
+                            .padding(.bottom, theme.spacing.sm + theme.spacing.xs)
+                        
+                        // Header
+                        HStack {
+                            Text(title)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(theme.text)
+                            
+                            Spacer()
+                            
+                            AppCloseButton {
+                                withAnimation(.spring()) {
+                                    isPresented = false
+                                }
+                            }
+                        }
+                        .padding(.horizontal, theme.spacing.lg)
+                        .padding(.bottom, theme.spacing.md)
+                        
+                        // Content
+                        ScrollView {
+                            content
+                                .padding(.horizontal, theme.spacing.lg)
+                                .padding(.bottom, geometry.safeAreaInsets.bottom + theme.spacing.lg)
+                        }
+                        .frame(maxHeight: geometry.size.height * 0.7)
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: theme.cornerRadius * 1.5, style: .continuous) // 24
+                            .fill(theme.surface)
+                            .ignoresSafeArea(edges: .bottom)
+                    )
+                    .offset(y: max(0, dragOffset.height))
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if value.translation.height > 0 {
+                                    dragOffset = value.translation
+                                    isDragging = true
+                                }
+                            }
+                            .onEnded { value in
+                                isDragging = false
+                                if value.translation.height > 100 {
+                                    withAnimation(.spring()) {
+                                        isPresented = false
+                                    }
+                                } else {
+                                    withAnimation(.spring()) {
+                                        dragOffset = .zero
+                                    }
+                                }
+                            }
+                    )
+                    .transition(.move(edge: .bottom))
+                }
+            }
+            .animation(.spring(), value: isPresented)
+            .animation(.spring(), value: dragOffset)
+        }
+    }
+}

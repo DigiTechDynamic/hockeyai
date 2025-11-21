@@ -1,0 +1,151 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "827A878D",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "HOCKEY_PRO_GROUP",
+      "localizations" : [
+        {
+          "description" : "STY Hockey Pro Subscription",
+          "displayName" : "STY Hockey Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "HockeyAppProSubscription",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "WEEKLY_STANDARD",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Weekly subscription to STY Hockey Pro - No Trial",
+              "displayName" : "Weekly Pro Access",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "hockeyapp_weekly_499",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Hockey Weekly Standard (No Trial)",
+          "subscriptionGroupID" : "HOCKEY_PRO_GROUP",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "YEARLY_STANDARD",
+          "introductoryOffer" : {
+            "displayPrice" : "0.00",
+            "internalID" : "YEARLY_3DAY_TRIAL",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Yearly subscription to STY Hockey Pro - Best Value with 3-Day Trial",
+              "displayName" : "Yearly Pro Access",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "hockeyapp_yearly_4999_T",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Hockey Yearly Standard (3-Day Trial)",
+          "subscriptionGroupID" : "HOCKEY_PRO_GROUP",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

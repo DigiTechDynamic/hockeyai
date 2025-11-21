@@ -1,0 +1,31 @@
+# Xcode build exclusions
+# This file tells Xcode to ignore these files when building
+
+# Documentation files
+README.md
+*.md
+# Explicitly ignore any QUICK_REFERENCE docs to prevent duplicates
+QUICK_REFERENCE.md
+**/QUICK_REFERENCE.md
+# Explicit project paths that have caused duplicate bundle outputs
+App/Features/Home/QUICK_REFERENCE.md
+App/Features/ViralFeatures/PlayerRater/QUICK_REFERENCE.md
+# Explicitly ignore feature READMEs (to avoid Xcode resource conflicts)
+App/**/README.md
+App/Features/**/README.md
+App/Features/Train/**/README.md
+
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Other development files
+*.todo
+*.txt
+.DS_Store
+
+# Claude AI configuration files
+.claude/
+.claude/**/*
