@@ -56,7 +56,7 @@ struct ProfileView: View {
                     // Privacy Policy Section
                     privacyPolicySection
 
-                    // Delete Account Section
+                    // Reset App Section
                     deleteAccountSection
                 }
                 .frame(maxWidth: contentMaxWidth)
@@ -439,17 +439,17 @@ struct ProfileView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
-    // MARK: - Delete Account Section
+    // MARK: - Reset App Section
     private var deleteAccountSection: some View {
         Button(action: {
             deleteAccount()
         }) {
             HStack {
-                Image(systemName: "trash")
+                Image(systemName: "arrow.counterclockwise")
                     .font(theme.fonts.body)
                     .foregroundColor(.white)
 
-                Text("Delete Account")
+                Text("Reset App")
                     .font(theme.fonts.body)
                     .foregroundColor(.white)
 
@@ -457,7 +457,7 @@ struct ProfileView: View {
             }
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.red)
+            .background(Color.orange)
             .cornerRadius(theme.cornerRadius)
         }
         .buttonStyle(PlainButtonStyle())
@@ -497,13 +497,13 @@ struct ProfileView: View {
 
                 // Now show confirmation alert
                 let alert = UIAlertController(
-                    title: "Delete Account?",
-                    message: "This will:\n• Delete your account\n• Clear all data\n• Reset to fresh state\n• Close the app\n\nReopen the app to start fresh with onboarding.",
+                    title: "Reset App?",
+                    message: "This will:\n• Clear all your data\n• Reset to fresh onboarding\n• Keep your theme and settings\n• Create new account on restart\n\nPerfect for testing or starting over!",
                     preferredStyle: .alert
                 )
 
                 alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-                alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
+                alert.addAction(UIAlertAction(title: "Reset App", style: .destructive) { _ in
                     performDeletion()
                 })
 
