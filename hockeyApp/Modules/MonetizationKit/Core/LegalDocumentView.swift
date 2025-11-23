@@ -20,7 +20,7 @@ struct PrivacyPolicySheet: View {
                         // Introduction
                         SectionView(
                             title: "Introduction",
-                            content: "Hockey AI (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application."
+                            content: "Snap Hockey (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application."
                         )
 
                         // Information We Collect
@@ -58,7 +58,7 @@ struct PrivacyPolicySheet: View {
                         // Your Rights
                         SectionView(
                             title: "Your Rights",
-                            content: "You have the right to:\n\n• Access your personal data\n• Correct inaccurate data\n• Request deletion of your data\n• Opt-out of analytics tracking\n• Export your training data\n\nTo exercise these rights, please contact us at support@hockeyapp.com"
+                            content: "You have the right to:\n\n• Access your personal data\n• Correct inaccurate data\n• Request deletion of your data\n• Opt-out of analytics tracking\n• Export your training data\n\nTo exercise these rights, please contact us at support@snaphockey.com"
                         )
 
                         // Children's Privacy
@@ -70,7 +70,7 @@ struct PrivacyPolicySheet: View {
                         // Contact Us
                         SectionView(
                             title: "Contact Us",
-                            content: "If you have questions about this Privacy Policy, please contact us at:\n\nEmail: support@hockeyapp.com\nWebsite: www.hockeyapp.com/support"
+                            content: "If you have questions about this Privacy Policy, please contact us at:\n\nEmail: support@snaphockey.com\nWebsite: www.snaphockey.com/support"
                         )
                     }
                 }

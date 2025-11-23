@@ -10,7 +10,7 @@ final class AppSecrets {
     
     // MARK: - Properties
     private let secretsPlist: NSDictionary?
-    private let keychainService = "com.hockeyapp.secrets"
+    private let keychainService = "com.snaphockey.secrets"
     
     // MARK: - Initialization
     private init() {

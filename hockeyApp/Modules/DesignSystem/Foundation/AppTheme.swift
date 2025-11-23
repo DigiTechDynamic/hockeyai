@@ -76,7 +76,7 @@ public struct ThemeSpacing {
 public struct ThemeFonts {
     // Using consistent typography system - max 3-4 weights as per best practices
     // Display & Branding
-    public let display: Font = .system(size: 48, weight: .black, design: .default)  // HOCKEYAPP logo only
+    public let display: Font = .system(size: 48, weight: .black, design: .default)  // SNAP HOCKEY logo only
 
     // Headers (Bold for impact)
     public let largeTitle: Font = .system(size: 34, weight: .bold, design: .default)  // Major sections
@@ -137,7 +137,7 @@ extension View {
         self.modifier(ThemeGlassEffect())
     }
 
-    // Glowing header text effect for HOCKEYAPP branding consistency
+    // Glowing header text effect for SNAP HOCKEY branding consistency
     public func glowingHeaderText() -> some View {
         self.modifier(GlowingHeaderTextModifier())
     }

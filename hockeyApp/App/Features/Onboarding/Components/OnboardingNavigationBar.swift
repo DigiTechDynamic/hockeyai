@@ -8,7 +8,7 @@ struct OnboardingNavigationBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Combined header row with Hockey AI, Back, and Skip
+            // Combined header row with Snap Hockey, Back, and Skip
             HStack {
                 // Back button - controlled by coordinator
                 if coordinator.showsBackButton() {
@@ -28,9 +28,9 @@ struct OnboardingNavigationBar: View {
 
                 Spacer()
 
-                // Center Hockey AI text - only show after first page
+                // Center Snap Hockey text - only show after first page
                 if coordinator.currentPageIndex > 0 {
-                    Text("Hockey AI")
+                    Text("Snap Hockey")
                         .font(.system(size: 20, weight: .black))
                         .foregroundStyle(
                             LinearGradient(

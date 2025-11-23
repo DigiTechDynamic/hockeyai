@@ -23,7 +23,7 @@ struct PaywallHeaderBar: View {
                 .buttonStyle(.plain)
             }
 
-            Text("Hockey AI")
+            Text("Snap Hockey")
                 .font(.system(size: 20, weight: .black))
                 .glowingHeaderText()
         }

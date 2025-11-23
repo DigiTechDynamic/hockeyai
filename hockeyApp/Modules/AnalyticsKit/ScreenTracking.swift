@@ -68,8 +68,8 @@ public final class ScreenTracker: ObservableObject {
     @Published public var isDebugEnabled: Bool = false
 
     private var screenStartTimes: [String: Date] = [:]
-    private let userDefaultsKey = "com.hockeyapp.screen_tracking"
-    private let debugEnabledKey = "com.hockeyapp.screen_tracking.debug_enabled"
+    private let userDefaultsKey = "com.snaphockey.screen_tracking"
+    private let debugEnabledKey = "com.snaphockey.screen_tracking.debug_enabled"
 
     public struct DebugEntry: Identifiable {
         public let id = UUID()

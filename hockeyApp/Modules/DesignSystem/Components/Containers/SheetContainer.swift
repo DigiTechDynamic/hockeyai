@@ -22,7 +22,7 @@ public struct SheetContainer<Content: View>: View {
     
     public var body: some View {
         ZStack {
-            // Full animated background matching HockeyAppShellView
+            // Full animated background matching SnapHockeyShellView
             backgroundWithGlowEffects
             
             VStack(spacing: 0) {

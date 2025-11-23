@@ -67,6 +67,8 @@ struct PersonalInfoSection: View {
                 let trimmedName = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmedName.isEmpty {
                     viewModel.displayName = trimmedName
+                    viewModel.saveProfile()  // Explicitly save profile after updating name
+                    print("✅ [PersonalInfoSection] Saved name: \(trimmedName)")
                 }
             }
         }

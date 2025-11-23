@@ -254,7 +254,7 @@ AIAnalyzer/
 
 ### AIFeatureKit Module
 
-**Location**: `/HockeyApp/Modules/AIFeatureKit/`
+**Location**: `/SnapHockey/Modules/AIFeatureKit/`
 
 #### Core Components
 
@@ -294,7 +294,7 @@ AIAnalyzer/
 
 ### MediaCaptureKit Module
 
-**Location**: `/HockeyApp/Modules/MediaCaptureKit/`
+**Location**: `/SnapHockey/Modules/MediaCaptureKit/`
 
 #### Core Components
 
@@ -483,7 +483,7 @@ Capture → Register → Use → Cleanup on dismiss/reset
 
 ### Equipment Tab
 
-**File**: `/HockeyApp/App/Features/Equipment/EquipmentView.swift`
+**File**: `/SnapHockey/App/Features/Equipment/EquipmentView.swift`
 
 **Integration**:
 - Primary entry point for Stick Analyzer
@@ -500,7 +500,7 @@ StickAnalyzerView → Analysis → StickAnalysisResult → Save as StickAnalysis
 
 ### Profile System
 
-**File**: `/HockeyApp/Shared/Models/PlayerProfile.swift`
+**File**: `/SnapHockey/Shared/Models/PlayerProfile.swift`
 
 **Used By**:
 - AI Coach Flow (provides context for analysis)

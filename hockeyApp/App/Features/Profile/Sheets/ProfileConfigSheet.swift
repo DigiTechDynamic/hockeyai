@@ -15,6 +15,7 @@ struct ProfileConfigSheet: View {
         case position
         case handedness
         case playStyle
+        case jerseyNumber
     }
 
     @ObservedObject var viewModel: ProfileViewModel
@@ -123,6 +124,7 @@ struct ProfileConfigSheet: View {
             case .position: positionEditor
             case .handedness: handednessEditor
             case .playStyle: playStyleEditor
+            case .jerseyNumber: jerseyNumberEditor
             }
         }
         .frame(maxWidth: .infinity)
@@ -531,6 +533,35 @@ struct ProfileConfigSheet: View {
         }
     }
 
+    private var jerseyNumberEditor: some View {
+        VStack(spacing: 24) {
+            let numberValue = Int(viewModel.jerseyNumber) ?? 0
+
+            Text(numberValue > 0 ? "#\(numberValue)" : "--")
+                .font(.system(size: 64, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [theme.primary, theme.accent], startPoint: .top, endPoint: .bottom))
+                .frame(maxWidth: .infinity)
+
+            let numberBinding = Binding<Int>(
+                get: { Int(viewModel.jerseyNumber) ?? 0 },
+                set: { newNumber in
+                    viewModel.jerseyNumber = "\(newNumber)"
+                    HapticManager.shared.playSelection()
+                }
+            )
+            Picker("Number", selection: numberBinding) {
+                ForEach(0...99, id: \.self) { number in
+                    Text("\(number)").tag(number)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(height: 160)
+            .background(theme.surface.opacity(0.4))
+            .cornerRadius(12)
+            .padding(.horizontal, 24)
+        }
+    }
+
     // MARK: - Helpers
     private var title: String {
         switch kind {
@@ -541,6 +572,7 @@ struct ProfileConfigSheet: View {
         case .position: return "Position"
         case .handedness: return "Shooting Hand"
         case .playStyle: return "Play Style"
+        case .jerseyNumber: return "Jersey Number"
         }
     }
 

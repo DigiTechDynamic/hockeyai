@@ -30,7 +30,7 @@ struct FeedbackFormView: View {
                                 .font(.system(size: 26, weight: .bold))
                                 .foregroundColor(theme.text)
 
-                            Text("Your feedback is valuable. We read every response and use it to make Hockey AI better.")
+                            Text("Your feedback is valuable. We read every response and use it to make Snap Hockey better.")
                                 .font(theme.fonts.caption)
                                 .foregroundColor(theme.textSecondary)
                                 .multilineTextAlignment(.center)

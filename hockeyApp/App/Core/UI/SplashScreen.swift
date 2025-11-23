@@ -21,8 +21,8 @@ struct SplashScreen: View {
         if let nhlTeam = themeManager.getCurrentNHLTeam() {
             return "\(nhlTeam.city) \(nhlTeam.name)".uppercased()
         }
-        // Default to Hockey AI for STY theme
-        return "HOCKEY AI"
+        // Default to Snap Hockey for STY theme
+        return "SNAP HOCKEY"
     }
 
     var body: some View {
@@ -78,16 +78,16 @@ struct SplashScreen: View {
                         .opacity(0.5)
 
                     // Logo - white_cropped.png with S and flames
-                    // Hockey AI Logo
+                    // Snap Hockey Logo
                     VStack(spacing: 6) {
-                        Text("Hockey AI")
+                        Text("Snap Hockey")
                             .font(.system(size: 50, weight: .black))
                             .italic()
                             .foregroundColor(.white)
                             .shadow(color: Color.white.opacity(0.4), radius: 8, x: 0, y: 0)
                             .shadow(color: theme.primary.opacity(0.5), radius: 16, x: 0, y: 4)
-                        
-                        Text("ELEVATE YOUR GAME")
+
+                        Text("CAPTURE YOUR STYLE")
                             .font(.system(size: 12, weight: .heavy))
                             .tracking(6)
                             .foregroundColor(.white.opacity(0.9))
@@ -102,7 +102,7 @@ struct SplashScreen: View {
                 // Company name removed (integrated into logo)
 
                 // Tagline
-                Text("PROVE YOUR STYLE")
+                Text("SHOWCASE YOUR GAME")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.textSecondary.opacity(0.8))
                     .tracking(3)
@@ -136,7 +136,7 @@ struct SplashScreen: View {
             .padding(.horizontal, theme.spacing.xl)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Loading Hockey AI")
+        .accessibilityLabel("Loading Snap Hockey")
         .accessibilityHint("Please wait while the app loads")
         .onAppear {
             animateIn()

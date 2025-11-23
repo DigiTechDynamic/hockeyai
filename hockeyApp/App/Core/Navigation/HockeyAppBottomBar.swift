@@ -1,7 +1,7 @@
 import SwiftUI
 
-// MARK: - Hockey App Bottom Bar
-struct HockeyAppBottomBar: View {
+// MARK: - Snap Hockey Bottom Bar
+struct SnapHockeyBottomBar: View {
     @Environment(\.theme) var theme
     let primaryAction: () -> Void
     let secondaryActions: [HockeyBottomAction]

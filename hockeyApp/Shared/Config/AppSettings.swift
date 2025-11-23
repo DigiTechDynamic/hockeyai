@@ -5,7 +5,7 @@ import SwiftUI
 struct AppSettings {
     
     // MARK: - App Info
-    static let appName = "Hockey AI"
+    static let appName = "Snap Hockey"
     static let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     static let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
     
@@ -20,7 +20,7 @@ struct AppSettings {
     
     // MARK: - API Settings
     struct API {
-        static let baseURL = "https://api.hockeyapp.com"
+        static let baseURL = "https://api.snaphockey.com"
         static let timeout: TimeInterval = 30
         static let maxRetries = 3
     }

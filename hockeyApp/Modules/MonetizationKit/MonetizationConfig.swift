@@ -35,23 +35,23 @@ struct MonetizationConfig {
     // MARK: - Product IDs by Tier (with and without trials)
     struct ProductIDs {
         // Budget Tier (no trials)
-        static let weeklyBudget = "hockeyapp_weekly_399"
-        static let monthlyBudget = "hockeyapp_monthly_999"
-        static let yearlyBudget = "hockeyapp_yearly_3999"
+        static let weeklyBudget = "snaphockey_weekly_399"
+        static let monthlyBudget = "snaphockey_monthly_999"
+        static let yearlyBudget = "snaphockey_yearly_3999"
 
         // Standard Tier (with and without trials)
-        static let weeklyStandard = "hockeyapp_weekly_499"  // No trial version
-        static let monthlyStandardTrial = "hockeyapp_monthly_1299_T"  // Has 3-day trial
-        static let yearlyStandardTrial = "hockeyapp_yearly_4999_T"   // Has 7-day trial
-        static let monthlyStandardNoTrial = "hockeyapp_monthly_1299"  // No trial
-        static let yearlyStandardNoTrial = "hockeyapp_yearly_4999"   // No trial
+        static let weeklyStandard = "snaphockey_weekly_499"  // No trial version
+        static let monthlyStandardTrial = "snaphockey_monthly_1299_T"  // Has 3-day trial
+        static let yearlyStandardTrial = "snaphockey_yearly_4999_T"   // Has 7-day trial
+        static let monthlyStandardNoTrial = "snaphockey_monthly_1299"  // No trial
+        static let yearlyStandardNoTrial = "snaphockey_yearly_4999"   // No trial
 
         // Premium Tier (with and without trials)
-        static let weeklyPremium = "hockeyapp_weekly_699"  // No trial version
-        static let monthlyPremiumTrial = "hockeyapp_monthly_1999_T"  // Has 3-day trial
-        static let yearlyPremiumTrial = "hockeyapp_yearly_5999_T"    // Has 7-day trial
-        static let monthlyPremiumNoTrial = "hockeyapp_monthly_1999"  // No trial
-        static let yearlyPremiumNoTrial = "hockeyapp_yearly_5999"   // No trial
+        static let weeklyPremium = "snaphockey_weekly_699"  // No trial version
+        static let monthlyPremiumTrial = "snaphockey_monthly_1999_T"  // Has 3-day trial
+        static let yearlyPremiumTrial = "snaphockey_yearly_5999_T"    // Has 7-day trial
+        static let monthlyPremiumNoTrial = "snaphockey_monthly_1999"  // No trial
+        static let yearlyPremiumNoTrial = "snaphockey_yearly_5999"   // No trial
     }
 
     // MARK: - Display Prices by Tier

@@ -4,7 +4,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-        // Firebase is already configured in AppInitializer.setup() (called from HockeyApp.init())
+        // Firebase is already configured in AppInitializer.setup() (called from SnapHockey.init())
         // No need to configure again here
 
         // Configure notifications - ONE LINE! That's it!

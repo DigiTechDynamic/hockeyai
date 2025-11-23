@@ -21,15 +21,15 @@ struct GreenyWelcomeScreen: View {
 
                 // Hero mark
                 VStack(spacing: 6) {
-                    Text("Hockey AI")
+                    Text("Snap Hockey")
                         .font(.system(size: 42, weight: .black))
                         .italic()
                         .foregroundColor(.white)
                         .shadow(color: Color.white.opacity(0.4), radius: 8, x: 0, y: 0)
                         .shadow(color: theme.primary.opacity(0.5), radius: 16, x: 0, y: 4)
                         .glitchEffect(isActive: appeared, intensity: 3.0) // Glitch effect
-                    
-                    Text("ELEVATE YOUR GAME")
+
+                    Text("CAPTURE YOUR STYLE")
                         .font(.system(size: 10, weight: .heavy))
                         .tracking(6) // Wide tracking like "ATHLETIC CO."
                         .foregroundColor(.white.opacity(0.9))

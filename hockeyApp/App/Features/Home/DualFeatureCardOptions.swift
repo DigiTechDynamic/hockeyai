@@ -48,7 +48,7 @@ struct DualFeatureCard_Option4: View {
                 cardsRow
             }
         }
-        .frame(height: 260)
+        .frame(height: 220)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)

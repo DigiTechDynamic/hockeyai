@@ -2,6 +2,7 @@ import Foundation
 
 // MARK: - Player Profile Model
 struct PlayerProfile: Codable {
+    var name: String? // Player's name
     var height: Double? // in inches
     var weight: Double? // in pounds
     var age: Int?
@@ -10,6 +11,7 @@ struct PlayerProfile: Codable {
     var handedness: Handedness?
     var playStyle: PlayStyle?
     var customPlayStyle: String?
+    var jerseyNumber: String? // Player's jersey number
     
     // Computed properties for display
     var heightInFeetAndInches: String {

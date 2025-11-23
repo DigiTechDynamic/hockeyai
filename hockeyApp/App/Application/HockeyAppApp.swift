@@ -5,7 +5,7 @@ import Mixpanel
 #endif
 
 @main
-struct HockeyApp: App {
+struct SnapHockey: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var monetization = MonetizationContainer.shared.monetizationManager

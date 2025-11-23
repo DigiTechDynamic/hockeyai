@@ -20,7 +20,7 @@ struct HockeyMainView: View {
     
     var body: some View {
         ZStack {
-            HockeyAppShellView(
+            SnapHockeyShellView(
                 header: MinimalFloatingHeader(
                     profileImage: profileImage,
                     userInitials: userInitials,
@@ -161,7 +161,7 @@ struct HockeyMainView: View {
         case 0: return "Home"
         case 1: return "AI Coach"
         case 2: return "Equipment"
-        default: return "Hockey AI"
+        default: return "Snap Hockey"
         }
     }
 

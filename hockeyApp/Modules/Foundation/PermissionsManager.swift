@@ -89,7 +89,7 @@ public final class PermissionsManager {
     public static let shared = PermissionsManager()
     
     // MARK: - Properties
-    private let queue = DispatchQueue(label: "com.hockeyapp.permissions", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.snaphockey.permissions", qos: .userInitiated)
     
     // MARK: - Initialization
     private init() {}

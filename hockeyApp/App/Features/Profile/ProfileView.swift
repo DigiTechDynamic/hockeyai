@@ -17,6 +17,7 @@ struct ProfileView: View {
     @State private var showingPositionPopup = false
     @State private var showingHandednessPopup = false
     @State private var showingPlayStylePopup = false
+    @State private var showingJerseyNumberPopup = false
     @State private var showingTeamSelector = false
 
     // Focus states
@@ -121,6 +122,11 @@ struct ProfileView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingJerseyNumberPopup) {
+            ProfileConfigSheet(viewModel: viewModel, kind: .jerseyNumber)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingTeamSelector) {
             NHLTeamSelectorSheet()
         }
@@ -215,6 +221,13 @@ struct ProfileView: View {
                     icon: "sportscourt.fill",
                     value: viewModel.selectedPosition?.rawValue ?? "Not set",
                     action: { showingPositionPopup = true }
+                )
+
+                editableAttributeRow(
+                    title: "Jersey Number",
+                    icon: "number",
+                    value: viewModel.getJerseyNumberDisplay(),
+                    action: { showingJerseyNumberPopup = true }
                 )
 
                 editableAttributeRow(

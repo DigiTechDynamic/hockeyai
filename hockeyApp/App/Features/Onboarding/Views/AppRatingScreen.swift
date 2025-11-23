@@ -17,18 +17,17 @@ struct AppRatingScreen: View {
             Spacer()
 
             VStack(spacing: theme.spacing.xl) {
-                // STY Athletic Co. logo with glow (matching home screen)
-                // Hockey AI Logo
+                // Snap Hockey logo with glow (matching home screen)
                 VStack(spacing: 6) {
-                    Text("Hockey AI")
+                    Text("Snap Hockey")
                         .font(.system(size: 40, weight: .black))
                         .italic()
                         .foregroundColor(.white)
                         .shadow(color: Color.white.opacity(0.4), radius: 8, x: 0, y: 0)
                         .shadow(color: theme.primary.opacity(0.5), radius: 16, x: 0, y: 4)
                         .glitchEffect(isActive: true, intensity: 2.0)
-                    
-                    Text("ELEVATE YOUR GAME")
+
+                    Text("CAPTURE YOUR STYLE")
                         .font(.system(size: 10, weight: .heavy))
                         .tracking(5)
                         .foregroundColor(.white.opacity(0.9))

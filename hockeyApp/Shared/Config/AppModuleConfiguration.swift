@@ -3,9 +3,9 @@ import Foundation
 // MARK: - App Module Configuration
 /// App-specific configuration for the reusable modules
 struct AppModuleConfiguration: ModuleConfiguration {
-    let bundleIdentifier = "com.hockeyapp"
+    let bundleIdentifier = "com.snaphockey"
     let resourceBundle = Bundle.main
-    let userDefaultsPrefix = "com.hockeyapp"
+    let userDefaultsPrefix = "com.snaphockey"
     let googleServicePlistName: String? = "GoogleService-Info"
     
     // Use STY theme as default

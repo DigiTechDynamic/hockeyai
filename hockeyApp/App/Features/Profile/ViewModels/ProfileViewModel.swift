@@ -33,6 +33,7 @@ class ProfileViewModel: ObservableObject {
     @Published var selectedPosition: Position? = nil
     @Published var selectedHandedness: Handedness? = nil
     @Published var selectedPlayStyle: PlayStyle?
+    @Published var jerseyNumber: String = ""
     @Published var showingTeamSelector = false
 
     // MARK: - Dependencies
@@ -83,6 +84,15 @@ class ProfileViewModel: ObservableObject {
         }
         .store(in: &cancellables)
 
+        // Auto-save when jersey number changes
+        $jerseyNumber
+            .dropFirst()
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.saveProfile()
+            }
+            .store(in: &cancellables)
+
         // Auto-save when display name changes
         $displayName
             .dropFirst()
@@ -102,9 +112,10 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Data Loading
     func loadUserData() {
-        // Load from current user
+        print("🔵 [ProfileViewModel] loadUserData() called")
+
+        // Load email from current user (email always comes from auth)
         if let user = authManager.currentUser {
-            displayName = user.displayName ?? ""
             email = user.email ?? ""
         }
 
@@ -117,6 +128,20 @@ class ProfileViewModel: ObservableObject {
         // Load profile data from UserDefaults
         if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
            let profile = try? JSONDecoder().decode(PlayerProfile.self, from: profileData) {
+            print("✅ [ProfileViewModel] Found existing profile in UserDefaults")
+            print("🔵 [ProfileViewModel] profile.name: '\(profile.name ?? "nil")'")
+            print("🔵 [ProfileViewModel] authManager.currentUser?.displayName: '\(authManager.currentUser?.displayName ?? "nil")'")
+
+            // Load name from profile first, fallback to auth manager
+            if let profileName = profile.name, !profileName.isEmpty {
+                displayName = profileName
+                print("✅ [ProfileViewModel] Loaded name from profile: '\(profileName)'")
+            } else if let authName = authManager.currentUser?.displayName {
+                displayName = authName
+                print("✅ [ProfileViewModel] Loaded name from auth manager: '\(authName)'")
+            } else {
+                print("⚠️ [ProfileViewModel] No name found in profile or auth manager")
+            }
             // Physical attributes
             if let profileHeight = profile.height {
                 let totalInches = Int(profileHeight)
@@ -150,6 +175,14 @@ class ProfileViewModel: ObservableObject {
             if let playStyle = profile.playStyle {
                 selectedPlayStyle = playStyle
             }
+            if let number = profile.jerseyNumber {
+                jerseyNumber = number
+            }
+        } else {
+            // No profile exists, load name from auth manager as fallback
+            if let authName = authManager.currentUser?.displayName {
+                displayName = authName
+            }
         }
     }
 
@@ -159,8 +192,12 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Data Persistence
     func saveProfile() {
+        print("🔵 [ProfileViewModel] saveProfile() called")
+        print("🔵 [ProfileViewModel] displayName: '\(displayName)'")
+
         // Create updated profile
         var profile = PlayerProfile()
+        profile.name = displayName.isEmpty ? nil : displayName  // Save name to profile
         profile.height = Double(heightFeet * 12 + heightInches)
 
         // Validate and save weight
@@ -189,10 +226,15 @@ class ProfileViewModel: ObservableObject {
         profile.position = selectedPosition
         profile.handedness = selectedHandedness
         profile.playStyle = selectedPlayStyle
+        profile.jerseyNumber = jerseyNumber.isEmpty ? nil : jerseyNumber
 
         // Save to UserDefaults
         if let encoded = try? JSONEncoder().encode(profile) {
             UserDefaults.standard.set(encoded, forKey: "playerProfile")
+            print("✅ [ProfileViewModel] Saved profile: \(displayName), #\(jerseyNumber), \(selectedPosition?.rawValue ?? "N/A")")
+
+            // Notify other parts of app that profile was updated
+            NotificationCenter.default.post(name: Notification.Name("PlayerProfileUpdated"), object: nil)
         }
 
         // Save metric preference
@@ -301,6 +343,18 @@ class ProfileViewModel: ObservableObject {
         if let style = playStyle {
             analytics.trackFieldEdited(field: "play_style", value: style.rawValue)
         }
+    }
+
+    func updateJerseyNumber(_ number: String) {
+        jerseyNumber = number
+        analytics.trackFieldEdited(field: "jersey_number", value: number)
+    }
+
+    func getJerseyNumberDisplay() -> String {
+        if jerseyNumber.isEmpty {
+            return "--"
+        }
+        return "#\(jerseyNumber)"
     }
 
     func updateUseMetric(_ value: Bool) {
