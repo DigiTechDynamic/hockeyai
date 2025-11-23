@@ -66,15 +66,45 @@ public struct CustomCameraView: View {
         ZStack {
             // Camera layer
             cameraLayer
-            
+
             // Focus indicator
             if showFocusIndicator {
                 focusIndicatorView
             }
-            
+
+            // Processing indicator
+            if camera.isProcessingPhoto {
+                processingOverlay
+            }
+
             // Controls overlay
             controlsOverlay
         }
+    }
+
+    @ViewBuilder
+    private var processingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+
+                Text("Processing...")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.black.opacity(0.7))
+            )
+        }
+        .transition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: camera.isProcessingPhoto)
     }
     
     @ViewBuilder
@@ -635,15 +665,16 @@ class CameraModel: NSObject, ObservableObject, @preconcurrency AVCapturePhotoCap
     @Published var alertMessage = ""
     @Published var flashMode: AVCaptureDevice.FlashMode = .off
     @Published var currentFrameRate: Int = 30
-    
+    @Published var isProcessingPhoto = false
+
     let session = AVCaptureSession()
     let preview = AVCaptureVideoPreviewLayer()
     let photoOutput = AVCapturePhotoOutput()
     let videoOutput = AVCaptureMovieFileOutput()
-    
+
     var onPhotoCaptured: ((UIImage) -> Void)?
     var onVideoCaptured: ((URL) -> Void)?
-    
+
     private var currentMode: MediaType = .image
     
     // Expose current device for lighting checks
@@ -677,8 +708,14 @@ class CameraModel: NSObject, ObservableObject, @preconcurrency AVCapturePhotoCap
     private func setupCamera() {
         session.beginConfiguration()
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
-              let input = try? AVCaptureDeviceInput(device: device) else { return }
+        // Use back camera by default for better quality photos, front camera for selfies
+        // For photo mode, prefer back camera unless explicitly switched
+        let preferredPosition: AVCaptureDevice.Position = currentMode == .image ? .back : .front
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: preferredPosition),
+              let input = try? AVCaptureDeviceInput(device: device) else {
+            print("❌ Failed to get camera device for position: \(preferredPosition)")
+            return
+        }
 
         // Set session preset for photo mode (video mode will be configured after session setup)
         if currentMode == .image {
@@ -764,8 +801,10 @@ class CameraModel: NSObject, ObservableObject, @preconcurrency AVCapturePhotoCap
             configureHighFrameRateVideo(device: device)
         }
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        // Start camera session with higher priority for faster startup
+        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
             self?.session.startRunning()
+            print("📸 Camera session started")
         }
     }
     
@@ -840,20 +879,34 @@ class CameraModel: NSObject, ObservableObject, @preconcurrency AVCapturePhotoCap
     }
     
     func capturePhoto() {
+        // Show processing indicator immediately
+        isProcessingPhoto = true
+
+        // Prepare haptic feedback asynchronously (non-blocking)
+        DispatchQueue.global(qos: .userInteractive).async {
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.prepare()
+            generator.impactOccurred()
+        }
+
         let settings = AVCapturePhotoSettings()
         settings.flashMode = flashMode
 
         // Enable high resolution for this capture
         settings.isHighResolutionPhotoEnabled = true
 
-        // Set quality prioritization (iOS 13+)
+        // Set quality prioritization to maximum (iOS 13+)
         if #available(iOS 13.0, *) {
             settings.photoQualityPrioritization = .quality
         }
 
-        // Enable auto still image stabilization
+        // Enable auto still image stabilization for sharper photos
         settings.isAutoStillImageStabilizationEnabled = true
 
+        // Enable auto red-eye reduction for better quality
+        settings.isAutoRedEyeReductionEnabled = true
+
+        print("📸 Capturing photo with settings: flashMode=\(flashMode.rawValue), highRes=true, quality=max")
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
     
@@ -975,9 +1028,59 @@ class CameraModel: NSObject, ObservableObject, @preconcurrency AVCapturePhotoCap
     
     // MARK: - AVCapturePhotoCaptureDelegate
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let data = photo.fileDataRepresentation(),
-              let image = UIImage(data: data) else { return }
-        onPhotoCaptured?(image)
+        if let error = error {
+            print("❌ Photo capture error: \(error)")
+            DispatchQueue.main.async { [weak self] in
+                self?.isProcessingPhoto = false
+            }
+            return
+        }
+
+        // Process photo on background thread to avoid UI lag
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let data = photo.fileDataRepresentation(),
+                  var image = UIImage(data: data) else {
+                print("❌ Failed to get photo data")
+                DispatchQueue.main.async {
+                    self?.isProcessingPhoto = false
+                }
+                return
+            }
+
+            print("📸 Processing photo: original size \(image.size.width)x\(image.size.height)")
+
+            // Optimize image size for better performance
+            // Compress to reasonable size while maintaining quality
+            let maxDimension: CGFloat = 2048 // Good balance between quality and performance
+            let size = image.size
+
+            if size.width > maxDimension || size.height > maxDimension {
+                let scale = maxDimension / max(size.width, size.height)
+                let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+
+                UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+                if let resizedImage = UIGraphicsGetImageFromCurrentImageContext() {
+                    image = resizedImage
+                    print("📸 Resized to: \(newSize.width)x\(newSize.height)")
+                }
+                UIGraphicsEndImageContext()
+            }
+
+            // Compress to JPEG with high quality (0.85 is a good balance)
+            if let compressedData = image.jpegData(compressionQuality: 0.85),
+               let optimizedImage = UIImage(data: compressedData) {
+                image = optimizedImage
+                print("📸 Compressed image size: \(compressedData.count / 1024)KB")
+            }
+
+            // Return to main thread to update UI
+            DispatchQueue.main.async {
+                self?.isProcessingPhoto = false
+                self?.onPhotoCaptured?(image)
+                print("✅ Photo processing complete")
+            }
+        }
     }
     
     // MARK: - AVCaptureFileOutputRecordingDelegate

@@ -210,6 +210,8 @@ struct JerseySelectionView: View {
                 .tracking(1)
 
             switch option {
+            case .usePhoto:
+                usePhotoJerseyPreview
             case .custom:
                 customJerseyUploadView
             case .nhl:
@@ -334,6 +336,29 @@ struct JerseySelectionView: View {
         }
     }
 
+    // MARK: - Use Photo Jersey Preview
+    private var usePhotoJerseyPreview: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 32))
+                .foregroundColor(theme.success)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Jersey from Your Photo")
+                    .font(theme.fonts.headline)
+                    .foregroundColor(.white)
+
+                Text("The jersey in your uploaded photo will be used")
+                    .font(theme.fonts.caption)
+                    .foregroundColor(theme.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .background(theme.success.opacity(0.1))
+        .cornerRadius(16)
+    }
+
     // MARK: - STY Jersey Preview
     private var styJerseyPreview: some View {
         HStack(spacing: 16) {
@@ -345,7 +370,7 @@ struct JerseySelectionView: View {
                 Text("STY Athletic Official")
                     .font(theme.fonts.headline)
                     .foregroundColor(.white)
-                
+
                 Text("Premium branded design")
                     .font(theme.fonts.caption)
                     .foregroundColor(theme.textSecondary)
@@ -404,6 +429,8 @@ class JerseySelectionViewModel: ObservableObject {
         guard let option = selectedOption else { return false }
 
         switch option {
+        case .usePhoto:
+            return true
         case .custom:
             return customJerseyImage != nil
         case .nhl:
@@ -417,6 +444,8 @@ class JerseySelectionViewModel: ObservableObject {
         guard let option = selectedOption else { return nil }
 
         switch option {
+        case .usePhoto:
+            return .usePhoto
         case .custom:
             guard let image = customJerseyImage else { return nil }
             return .custom(jerseyImage: image)
@@ -431,6 +460,7 @@ class JerseySelectionViewModel: ObservableObject {
 
 // MARK: - Jersey Option Enum
 enum JerseyOption {
+    case usePhoto
     case custom
     case nhl
     case sty
@@ -438,6 +468,7 @@ enum JerseyOption {
 
 // MARK: - Jersey Selection Result
 enum JerseySelection {
+    case usePhoto
     case custom(jerseyImage: UIImage)
     case nhl(team: NHLTeam)
     case sty

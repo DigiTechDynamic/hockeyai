@@ -684,8 +684,35 @@ class HockeyCardInfoViewModel: ObservableObject {
     }
 }
 
-// MARK: - Image Picker (Multiple)
-struct ImagePickerMultiple: UIViewControllerRepresentable {
+// MARK: - Image Picker (Multiple) - Using optimized CustomCameraView
+struct ImagePickerMultiple: View {
+    let sourceType: UIImagePickerController.SourceType
+    let onImagePicked: (UIImage) -> Void
+    @Environment(\.dismiss) var dismiss
+
+    @State private var capturedImage: UIImage?
+
+    var body: some View {
+        Group {
+            if sourceType == .camera {
+                // Use optimized CustomCameraView for camera
+                CustomCameraView(capturedImage: $capturedImage, mode: .image)
+                    .onChange(of: capturedImage) { _, newImage in
+                        if let image = newImage {
+                            onImagePicked(image)
+                            dismiss()
+                        }
+                    }
+            } else {
+                // Use system picker for photo library
+                LegacyImagePicker(sourceType: sourceType, onImagePicked: onImagePicked)
+            }
+        }
+    }
+}
+
+// MARK: - Legacy Image Picker for Photo Library Only
+private struct LegacyImagePicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
     let onImagePicked: (UIImage) -> Void
     @Environment(\.dismiss) var dismiss
@@ -704,17 +731,46 @@ struct ImagePickerMultiple: UIViewControllerRepresentable {
     }
 
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: ImagePickerMultiple
+        let parent: LegacyImagePicker
 
-        init(_ parent: ImagePickerMultiple) {
+        init(_ parent: LegacyImagePicker) {
             self.parent = parent
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let image = info[.originalImage] as? UIImage {
-                parent.onImagePicked(image)
+                // Optimize image before passing to parent to prevent lag
+                DispatchQueue.global(qos: .userInitiated).async {
+                    var optimizedImage = image
+
+                    // Resize if too large
+                    let maxDimension: CGFloat = 2048
+                    if image.size.width > maxDimension || image.size.height > maxDimension {
+                        let scale = maxDimension / max(image.size.width, image.size.height)
+                        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+
+                        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+                        image.draw(in: CGRect(origin: .zero, size: newSize))
+                        if let resized = UIGraphicsGetImageFromCurrentImageContext() {
+                            optimizedImage = resized
+                        }
+                        UIGraphicsEndImageContext()
+                    }
+
+                    // Compress
+                    if let compressedData = optimizedImage.jpegData(compressionQuality: 0.85),
+                       let compressed = UIImage(data: compressedData) {
+                        optimizedImage = compressed
+                    }
+
+                    DispatchQueue.main.async {
+                        self.parent.onImagePicked(optimizedImage)
+                        self.parent.dismiss()
+                    }
+                }
+            } else {
+                parent.dismiss()
             }
-            parent.dismiss()
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

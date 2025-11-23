@@ -8,6 +8,7 @@ struct HockeyCardCreationView: View {
     let onDismiss: () -> Void
 
     @State private var showingCardGeneration = false
+    @State private var showingHistory = false
 
     var body: some View {
         ZStack {
@@ -43,6 +44,9 @@ struct HockeyCardCreationView: View {
 
                         // SECTION 1: Photo upload
                         photoUploadSection
+
+                        // Divider
+                        sectionDivider
 
                         // SECTION 2: Player info
                         playerInfoSection
@@ -80,6 +84,9 @@ struct HockeyCardCreationView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingHistory) {
+            CardHistoryView()
+        }
     }
 
     // MARK: - Header
@@ -105,7 +112,17 @@ struct HockeyCardCreationView: View {
 
             Spacer()
 
-            Color.clear.frame(width: 40, height: 40)
+            Button(action: { showingHistory = true }) {
+                ZStack {
+                    Circle()
+                        .fill(theme.surface.opacity(0.5))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
@@ -119,7 +136,7 @@ struct HockeyCardCreationView: View {
     // MARK: - Title Section
     private var titleSection: some View {
         VStack(spacing: 12) {
-            Text("Upload a photo and enter your player details to create your custom hockey card.")
+            Text("Create your custom hockey card in a few simple steps.")
                 .font(theme.fonts.body)
                 .foregroundColor(theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -130,46 +147,30 @@ struct HockeyCardCreationView: View {
     // MARK: - Photo Upload Section
     private var photoUploadSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Label("PHOTOS", systemImage: "camera.fill")
-                    .font(theme.fonts.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(theme.primary)
-                    .tracking(1)
+            Label("PHOTOS", systemImage: "camera.fill")
+                .font(theme.fonts.caption)
+                .fontWeight(.bold)
+                .foregroundColor(theme.primary)
+                .tracking(1)
 
-                Spacer()
+            Text("Upload a photo of yourself in hockey gear or any photo.")
+                .font(theme.fonts.caption)
+                .foregroundColor(theme.textSecondary)
 
-                Text("\(viewModel.playerPhotos.count)/3")
-                    .font(theme.fonts.caption)
-                    .foregroundColor(theme.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(theme.surface)
-                    .cornerRadius(8)
-            }
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    if viewModel.canAddMorePhotos {
-                        addPhotoButton
-                    }
-
-                    ForEach(Array(viewModel.playerPhotos.enumerated()), id: \.offset) { index, image in
-                        photoThumbnail(image: image, index: index)
-                    }
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 2)
+            if let image = viewModel.playerPhotos.first {
+                photoThumbnail(image: image, index: 0)
+            } else {
+                addPhotoButton
             }
         }
     }
 
     private var addPhotoButton: some View {
         Button(action: {
-            viewModel.currentPhotoIndex = viewModel.playerPhotos.count
+            viewModel.currentPhotoIndex = 0
             viewModel.showingPhotoOptions = true
         }) {
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 ZStack {
                     Circle()
                         .fill(theme.primary.opacity(0.1))
@@ -189,7 +190,8 @@ struct HockeyCardCreationView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
             }
-            .frame(width: 140, height: 180)
+            .frame(maxWidth: .infinity)
+            .frame(height: 220)
             .background(theme.surface.opacity(0.3))
             .cornerRadius(20)
             .overlay(
@@ -199,31 +201,24 @@ struct HockeyCardCreationView: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .confirmationDialog("Player Photo", isPresented: $viewModel.showingPhotoOptions) {
-            Button("Take Photo") {
+        .confirmationDialog("Add Your Photo", isPresented: $viewModel.showingPhotoOptions) {
+            Button("📸 Take Photo Now") {
                 viewModel.photoSourceType = .camera
                 viewModel.showingImagePicker = true
             }
-            Button("Choose from Library") {
+            Button("🖼️ Choose from Photos") {
                 viewModel.photoSourceType = .photoLibrary
                 viewModel.showingImagePicker = true
             }
-            if viewModel.currentPhotoIndex < viewModel.playerPhotos.count {
-                Button("Remove Photo", role: .destructive) {
-                    viewModel.removePhoto(at: viewModel.currentPhotoIndex)
-                }
-            }
             Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Upload a photo of yourself in hockey gear or any photo")
         }
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerMultiple(
                 sourceType: viewModel.photoSourceType,
                 onImagePicked: { image in
-                    if viewModel.currentPhotoIndex < viewModel.playerPhotos.count {
-                        viewModel.playerPhotos[viewModel.currentPhotoIndex] = image
-                    } else {
-                        viewModel.addPhoto(image)
-                    }
+                    viewModel.addPhoto(image)
                 }
             )
         }
@@ -231,22 +226,17 @@ struct HockeyCardCreationView: View {
 
     private func photoThumbnail(image: UIImage, index: Int) -> some View {
         ZStack(alignment: .topTrailing) {
-            Button(action: {
-                viewModel.currentPhotoIndex = index
-                viewModel.showingPhotoOptions = true
-            }) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 140, height: 180)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(theme.surface.opacity(0.5), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
-            }
-            .buttonStyle(PlainButtonStyle())
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(theme.primary.opacity(0.5), lineWidth: 2)
+                )
+                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
 
             Button(action: {
                 withAnimation {
@@ -254,9 +244,9 @@ struct HockeyCardCreationView: View {
                 }
             }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 28, height: 28)
                     .background(Color.red)
                     .clipShape(Circle())
                     .shadow(radius: 2)
@@ -273,6 +263,10 @@ struct HockeyCardCreationView: View {
                 .fontWeight(.bold)
                 .foregroundColor(theme.primary)
                 .tracking(1)
+
+            Text("Enter your player details that will appear on your card.")
+                .font(theme.fonts.caption)
+                .foregroundColor(theme.textSecondary)
 
             VStack(spacing: 16) {
                 modernInputRow(
@@ -385,6 +379,14 @@ struct HockeyCardCreationView: View {
             // Jersey options grid
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                 jerseyOptionCard(
+                    icon: "photo.fill",
+                    title: "Use Photo",
+                    description: "Jersey in Photo",
+                    isSelected: viewModel.selectedJerseyOption == .usePhoto,
+                    action: { viewModel.selectedJerseyOption = .usePhoto }
+                )
+
+                jerseyOptionCard(
                     icon: "camera.fill",
                     title: "Custom",
                     description: "Upload Photo",
@@ -407,7 +409,6 @@ struct HockeyCardCreationView: View {
                     isSelected: viewModel.selectedJerseyOption == .sty,
                     action: { viewModel.selectedJerseyOption = .sty }
                 )
-                .gridCellColumns(2)
             }
 
             // Sub-selection view
@@ -478,6 +479,8 @@ struct HockeyCardCreationView: View {
                 .tracking(1)
 
             switch option {
+            case .usePhoto:
+                usePhotoJerseyPreview
             case .custom:
                 customJerseyUploadView
             case .nhl:
@@ -596,6 +599,28 @@ struct HockeyCardCreationView: View {
         .sheet(isPresented: $viewModel.showingNHLTeamPicker) {
             NHLTeamPickerSheet(selectedTeam: $viewModel.selectedNHLTeam)
         }
+    }
+
+    private var usePhotoJerseyPreview: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 32))
+                .foregroundColor(theme.success)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Jersey from Your Photo")
+                    .font(theme.fonts.headline)
+                    .foregroundColor(.white)
+
+                Text("The jersey in your uploaded photo will be used")
+                    .font(theme.fonts.caption)
+                    .foregroundColor(theme.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .background(theme.success.opacity(0.1))
+        .cornerRadius(16)
     }
 
     private var styJerseyPreview: some View {
@@ -822,10 +847,6 @@ class HockeyCardCreationViewModel: ObservableObject {
     @Published var photoSourceType: UIImagePickerController.SourceType = .photoLibrary
     @Published var currentPhotoIndex: Int = 0
 
-    var canAddMorePhotos: Bool {
-        playerPhotos.count < 3
-    }
-
     var isPlayerInfoComplete: Bool {
         !playerName.isEmpty && !jerseyNumber.isEmpty && position != nil && !playerPhotos.isEmpty
     }
@@ -834,6 +855,8 @@ class HockeyCardCreationViewModel: ObservableObject {
         guard let option = selectedJerseyOption else { return false }
 
         switch option {
+        case .usePhoto:
+            return true
         case .custom:
             return customJerseyImage != nil
         case .nhl:
@@ -914,6 +937,8 @@ class HockeyCardCreationViewModel: ObservableObject {
         guard let option = selectedJerseyOption else { return nil }
 
         switch option {
+        case .usePhoto:
+            return .usePhoto
         case .custom:
             guard let image = customJerseyImage else { return nil }
             return .custom(jerseyImage: image)
@@ -926,8 +951,10 @@ class HockeyCardCreationViewModel: ObservableObject {
     }
 
     func addPhoto(_ image: UIImage) {
-        if playerPhotos.count < 3 {
+        if playerPhotos.isEmpty {
             playerPhotos.append(image)
+        } else {
+            playerPhotos[0] = image
         }
     }
 

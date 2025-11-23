@@ -160,6 +160,42 @@ struct CardGenerationView: View {
             }
             .padding(.horizontal, 20)
 
+            // Progress Bar
+            VStack(spacing: 8) {
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        // Background
+                        Capsule()
+                            .fill(theme.surface.opacity(0.3))
+                            .frame(height: 8)
+                        
+                        // Fill
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [theme.primary, theme.accent],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geometry.size.width * viewModel.progress, height: 8)
+                            .animation(.linear(duration: 0.1), value: viewModel.progress)
+                    }
+                }
+                .frame(height: 8)
+                
+                HStack {
+                    Text("\(Int(viewModel.progress * 100))%")
+                        .font(theme.fonts.caption)
+                        .foregroundColor(theme.textSecondary)
+                    Spacer()
+                    Text(viewModel.loadingStage)
+                        .font(theme.fonts.caption)
+                        .foregroundColor(theme.textSecondary)
+                }
+            }
+            .padding(.horizontal, 40)
+
             // Tips
             VStack(alignment: .leading, spacing: 16) {
                 tipRow(icon: "clock.fill", text: "Processing high-res details...")
@@ -338,6 +374,11 @@ class CardGenerationViewModel: ObservableObject {
     @Published var dominantColor: Color? = nil
     @Published var error: String? = nil
     @Published var rotationAngle: Double = 0
+    
+    // Progress state
+    @Published var progress: CGFloat = 0.0
+    @Published var loadingStage: String = "Initializing..."
+    private var progressTimer: Timer?
 
     private let playerInfo: PlayerCardInfo
     private let jerseySelection: JerseySelection
@@ -370,6 +411,7 @@ class CardGenerationViewModel: ObservableObject {
         isGenerating = true
         error = nil
         generatedCard = nil
+        startProgressSimulation()
 
         service.generateHockeyCard(
             playerInfo: playerInfo,
@@ -380,27 +422,33 @@ class CardGenerationViewModel: ObservableObject {
 
                 switch result {
                 case .success(let image):
-                    self?.generatedCard = image
-                    // Calculate dominant color
-                    if let averageColor = image.averageColor {
-                        self?.dominantColor = Color(averageColor)
+                    self?.completeProgress()
+                    
+                    // Delay slightly to show 100%
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self?.generatedCard = image
+                        // Calculate dominant color
+                        if let averageColor = image.averageColor {
+                            self?.dominantColor = Color(averageColor)
+                        }
+                        HapticManager.shared.playNotification(type: .success)
+                        
+                        // Save to documents for Home Screen display
+                        if let data = image.pngData(),
+                           let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                            let fileURL = documents.appendingPathComponent("latest_generated_card.png")
+                            try? data.write(to: fileURL)
+                            UserDefaults.standard.set(fileURL.path, forKey: "latestGeneratedCardPath")
+                            // Post notification to update Home View
+                            NotificationCenter.default.post(name: NSNotification.Name("LatestCardUpdated"), object: nil)
+                        }
+                        
+                        // Persist in local history (fire-and-forget)
+                        GeneratedCardsStore.shared.save(image: image)
                     }
-                    HapticManager.shared.playNotification(type: .success)
-
-                    // Save to documents for Home Screen display
-                    if let data = image.pngData(),
-                       let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                        let fileURL = documents.appendingPathComponent("latest_generated_card.png")
-                        try? data.write(to: fileURL)
-                        UserDefaults.standard.set(fileURL.path, forKey: "latestGeneratedCardPath")
-                        // Post notification to update Home View
-                        NotificationCenter.default.post(name: NSNotification.Name("LatestCardUpdated"), object: nil)
-                    }
-
-                    // Persist in local history (fire-and-forget)
-                    GeneratedCardsStore.shared.save(image: image)
 
                 case .failure(let error):
+                    self?.stopProgress()
                     self?.error = error.localizedDescription
                     self?.hasStartedGeneration = false  // Reset flag on error so user can retry
                     HapticManager.shared.playNotification(type: .error)
@@ -428,5 +476,50 @@ class CardGenerationViewModel: ObservableObject {
            let rootVC = windowScene.windows.first?.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
+    }
+    
+    // MARK: - Progress Simulation
+    
+    private func startProgressSimulation() {
+        progress = 0.0
+        loadingStage = "Initializing..."
+        progressTimer?.invalidate()
+        
+        let totalDuration: TimeInterval = 12.0 // Expected generation time
+        let updateInterval: TimeInterval = 0.1
+        
+        progressTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] timer in
+            guard let self = self else { return }
+            
+            // Non-linear progress curve
+            if self.progress < 0.3 {
+                self.progress += 0.02 // Fast start
+                self.loadingStage = "Analyzing photos..."
+            } else if self.progress < 0.6 {
+                self.progress += 0.005 // Slow middle
+                self.loadingStage = "Generating artwork..."
+            } else if self.progress < 0.9 {
+                self.progress += 0.002 // Very slow end
+                self.loadingStage = "Refining details..."
+            } else {
+                // Cap at 90% until complete
+                self.progress = 0.9
+                self.loadingStage = "Finalizing..."
+            }
+        }
+    }
+    
+    private func completeProgress() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+        withAnimation {
+            progress = 1.0
+            loadingStage = "Complete!"
+        }
+    }
+    
+    private func stopProgress() {
+        progressTimer?.invalidate()
+        progressTimer = nil
     }
 }

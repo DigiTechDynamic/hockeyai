@@ -138,7 +138,7 @@ struct HockeyCardGeneratorCard: View {
     @Environment(\.theme) var theme
     @StateObject private var monetization = MonetizationManager.shared
     @State private var latestCardImage: UIImage?
-    @State private var showingHistory = false
+
     let onTap: () -> Void
 
     var body: some View {
@@ -263,30 +263,10 @@ struct HockeyCardGeneratorCard: View {
                 .offset(x: 10, y: -25) // Pop up and right
                 .padding(.trailing, 10)
             }
-            // History overlay button (top-right)
-            .overlay(alignment: .topTrailing) {
-                Button(action: { showingHistory = true }) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(
-                            Circle().fill(theme.surface.opacity(0.6))
-                        )
-                        .overlay(
-                            Circle().stroke(Color.white.opacity(0.25), lineWidth: 1)
-                        )
-                }
-                .padding(12)
-                .buttonStyle(PlainButtonStyle())
-                .accessibilityLabel("Previous Generations")
-            }
         }
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture { onTap() }
-        .sheet(isPresented: $showingHistory) {
-            CardHistoryView()
-        }
+
         .onAppear {
             if let path = UserDefaults.standard.string(forKey: "latestGeneratedCardPath"),
                let image = UIImage(contentsOfFile: path) {

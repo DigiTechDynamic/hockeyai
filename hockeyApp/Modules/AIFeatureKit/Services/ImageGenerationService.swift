@@ -105,7 +105,11 @@ final class ImageGenerationService {
         let sessionConfig = URLSessionConfiguration.default
         sessionConfig.timeoutIntervalForRequest = Constants.defaultRequestTimeout
         sessionConfig.timeoutIntervalForResource = Constants.defaultRequestTimeout
-        sessionConfig.networkServiceType = .default
+        sessionConfig.networkServiceType = .responsiveData
+        sessionConfig.waitsForConnectivity = true
+        sessionConfig.allowsCellularAccess = true
+        sessionConfig.allowsConstrainedNetworkAccess = true
+        sessionConfig.allowsExpensiveNetworkAccess = true
 
         self.session = URLSession(configuration: sessionConfig)
     }
@@ -258,14 +262,31 @@ final class ImageGenerationService {
         request.setValue(configuration.apiKey, forHTTPHeaderField: "x-goog-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        // CRITICAL FIX: Disable HTTP/3 to prevent QUIC protocol failures on cellular networks
+        // This solves the "quic_conn_process_inbound unable to parse packet" errors
+        if #available(iOS 15.0, *) {
+            request.assumesHTTP3Capable = false
+        }
+
+        // Fix for iOS keep-alive bug that causes -1005 errors on cellular
+        request.setValue("close", forHTTPHeaderField: "Connection")
+
+        // Increase timeout for image generation (can take 30-60 seconds)
+        request.timeoutInterval = 120.0
+
         // Build parts array with text and optional images
         var parts: [[String: Any]] = [
             ["text": prompt]
         ]
 
         // Add reference images as inline_data with highest quality compression
+        // Add reference images as inline_data with optimized compression for cellular
         for image in referenceImages {
-            if let imageData = image.jpegData(compressionQuality: 1.0) {
+            // Resize to max 1024px to reduce payload size (critical for cellular)
+            let resizedImage = resizeImage(image, maxDimension: 1024)
+            
+            // Use 0.8 compression to balance quality and size
+            if let imageData = resizedImage.jpegData(compressionQuality: 0.8) {
                 let base64String = imageData.base64EncodedString()
                 parts.append([
                     "inline_data": [
@@ -372,6 +393,37 @@ final class ImageGenerationService {
             tasks.forEach { $0.cancel() }
         }
     }
+
+    // MARK: - Helper Methods
+    
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        // If image is already smaller, return as-is
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let aspectRatio = size.width / size.height
+        let newSize: CGSize
+
+        if size.width > size.height {
+            // Landscape or square
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            // Portrait
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+
+        // Resize using high-quality graphics context
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        return resizedImage ?? image
+    }
 }
 
 // MARK: - Hockey Card Generation Extension
@@ -407,6 +459,10 @@ extension ImageGenerationService {
 
         // SECOND: Add jersey reference based on selection
         switch jerseySelection {
+        case .usePhoto:
+            // Use jersey from player photo - no additional reference needed
+            print("🖼️ [ImageGenerationService] Using jersey from player photo")
+
         case .custom(let jerseyImage):
             // Use the custom jersey image as reference
             referenceImages.append(jerseyImage)
@@ -500,6 +556,17 @@ extension ImageGenerationService {
         let jerseyReferenceText = photoCount > 1 ? "images (photos \(photoCount + 1) onward)" : "image (photo \(photoCount + 1))"
 
         switch jerseySelection {
+        case .usePhoto:
+            prompt += """
+            Jersey: Keep the exact jersey shown in the player's photo
+            - Use the jersey already worn by the player in the reference photo(s)
+            - Maintain the original jersey design, colors, and style from the player photo
+            - Keep all original branding and design elements
+            - Ensure clear visibility of jersey number #\(playerInfo.jerseyNumber)
+            - Enhance and make the jersey look professional and game-ready
+
+            """
+
         case .custom(let jerseyImage):
             prompt += """
             Jersey: Use the custom jersey shown in reference \(jerseyReferenceText)
