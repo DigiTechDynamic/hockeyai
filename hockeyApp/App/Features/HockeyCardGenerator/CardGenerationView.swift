@@ -168,7 +168,7 @@ struct CardGenerationView: View {
                         Capsule()
                             .fill(theme.surface.opacity(0.3))
                             .frame(height: 8)
-                        
+
                         // Fill
                         Capsule()
                             .fill(
@@ -183,7 +183,7 @@ struct CardGenerationView: View {
                     }
                 }
                 .frame(height: 8)
-                
+
                 HStack {
                     Text("\(Int(viewModel.progress * 100))%")
                         .font(theme.fonts.caption)
@@ -195,41 +195,6 @@ struct CardGenerationView: View {
                 }
             }
             .padding(.horizontal, 40)
-
-            // Tips
-            VStack(alignment: .leading, spacing: 16) {
-                tipRow(icon: "clock.fill", text: "Processing high-res details...")
-                tipRow(icon: "sparkles", text: "Applying pro lighting effects...")
-                tipRow(icon: "photo.fill", text: "Finalizing composition...")
-            }
-            .padding(24)
-            .background(theme.surface.opacity(0.3))
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(theme.primary.opacity(0.2), lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
-        }
-    }
-
-    private func tipRow(icon: String, text: String) -> some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(theme.primary.opacity(0.1))
-                    .frame(width: 32, height: 32)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(theme.primary)
-            }
-
-            Text(text)
-                .font(theme.fonts.callout)
-                .foregroundColor(.white)
-
-            Spacer()
         }
     }
 

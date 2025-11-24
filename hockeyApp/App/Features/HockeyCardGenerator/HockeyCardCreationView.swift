@@ -39,10 +39,6 @@ struct HockeyCardCreationView: View {
                 // Single Scrollable Content
                 ScrollView {
                     VStack(spacing: 32) {
-                        // Title and description
-                        titleSection
-                            .padding(.top, 10)
-
                         // SECTION 1: Photo upload
                         photoUploadSection
 
@@ -64,7 +60,7 @@ struct HockeyCardCreationView: View {
                         Spacer(minLength: 100)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.top, 16)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -104,7 +100,7 @@ struct HockeyCardCreationView: View {
             // Header
             VStack(spacing: 0) {
                 HStack {
-                    Text("Select Photo Type")
+                    Text("What type of photo is this?")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
                     Spacer()
@@ -129,6 +125,11 @@ struct HockeyCardCreationView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 8)
             }
+
+            Text("This helps us create the best card possible")
+                .font(.system(size: 14))
+                .foregroundColor(theme.textSecondary)
+                .padding(.bottom, 16)
 
             ScrollView {
                 VStack(spacing: 10) {
@@ -169,15 +170,16 @@ struct HockeyCardCreationView: View {
                         .foregroundColor(theme.primary)
                 }
 
-                // Text content - more concise
+                // Text content - simplified to just title and short description
                 VStack(alignment: .leading, spacing: 3) {
                     Text(type.rawValue)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
 
-                    Text(type.pros)
+                    Text(type.description)
                         .font(.system(size: 13))
                         .foregroundColor(theme.textSecondary)
+                        .lineLimit(2)
                 }
 
                 Spacer()
@@ -268,14 +270,9 @@ struct HockeyCardCreationView: View {
                 .foregroundColor(theme.primary)
                 .tracking(1)
 
-            Text("Upload a photo and we'll help you create the perfect card.")
+            Text("Upload any photo - we'll help you create your card.")
                 .font(theme.fonts.caption)
                 .foregroundColor(theme.textSecondary)
-
-            // Show educational info before upload
-            if viewModel.playerPhotos.isEmpty {
-                photoTypeEducationalCard
-            }
 
             // Show uploaded photo
             if let image = viewModel.playerPhotos.first {
@@ -447,7 +444,7 @@ struct HockeyCardCreationView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("Choose an action shot, headshot, full body, or hockey gear photo")
+            Text("Upload any photo - we'll help you create your card")
         }
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerMultiple(
