@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 // MARK: - Unified Hockey Card Creation View
 /// Single scrollable screen for creating hockey cards - combines player info and jersey selection
@@ -45,17 +46,20 @@ struct HockeyCardCreationView: View {
                         // SECTION 1: Photo upload
                         photoUploadSection
 
-                        // Divider
-                        sectionDivider
+                        // Only show remaining sections after photo is uploaded
+                        if !viewModel.playerPhotos.isEmpty {
+                            // Divider
+                            sectionDivider
 
-                        // SECTION 2: Player info
-                        playerInfoSection
+                            // SECTION 2: Player info
+                            playerInfoSection
 
-                        // Divider
-                        sectionDivider
+                            // Divider
+                            sectionDivider
 
-                        // SECTION 3: Jersey Selection
-                        jerseySelectionSection
+                            // SECTION 3: Jersey Selection
+                            jerseySelectionSection
+                        }
 
                         Spacer(minLength: 100)
                     }
@@ -65,10 +69,12 @@ struct HockeyCardCreationView: View {
                 .scrollIndicators(.hidden)
             }
 
-            // Bottom CTA (Floating)
-            VStack {
-                Spacer()
-                bottomCTA
+            // Bottom CTA (Floating) - only show when form is complete
+            if viewModel.isFormComplete {
+                VStack {
+                    Spacer()
+                    bottomCTA
+                }
             }
         }
         .navigationBarHidden(true)
@@ -87,6 +93,119 @@ struct HockeyCardCreationView: View {
         .sheet(isPresented: $showingHistory) {
             CardHistoryView()
         }
+        .sheet(isPresented: $viewModel.showingPhotoTypePicker) {
+            photoTypePickerSheet
+        }
+    }
+
+    // MARK: - Photo Type Picker Sheet
+    private var photoTypePickerSheet: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Select Photo Type")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
+
+                Divider().background(theme.divider)
+            }
+
+            // Photo preview - smaller
+            if let image = viewModel.playerPhotos.first {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(theme.primary.opacity(0.3), lineWidth: 2)
+                    )
+                    .padding(.top, 20)
+                    .padding(.bottom, 8)
+            }
+
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(PhotoUploadType.allCases, id: \.self) { type in
+                        photoTypeSelectionCard(type: type)
+                    }
+                }
+                .padding(20)
+            }
+
+            Spacer()
+        }
+        .background(theme.background.ignoresSafeArea())
+        .presentationDetents([.large])
+        .interactiveDismissDisabled(viewModel.selectedPhotoType == nil)
+    }
+
+    private func photoTypeSelectionCard(type: PhotoUploadType) -> some View {
+        Button(action: {
+            HapticManager.shared.playSelection()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                viewModel.selectedPhotoType = type
+            }
+            // Delay dismissal slightly for visual feedback
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                viewModel.showingPhotoTypePicker = false
+            }
+        }) {
+            HStack(spacing: 14) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(theme.surface.opacity(0.6))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: type.icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(theme.primary)
+                }
+
+                // Text content - more concise
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(type.rawValue)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    Text(type.pros)
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.textSecondary)
+                }
+
+                Spacer()
+
+                // Radio button selection indicator
+                ZStack {
+                    Circle()
+                        .strokeBorder(theme.primary, lineWidth: 2)
+                        .frame(width: 24, height: 24)
+
+                    if viewModel.selectedPhotoType == type {
+                        Circle()
+                            .fill(theme.primary)
+                            .frame(width: 14, height: 14)
+                    }
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(theme.surface.opacity(0.3))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(viewModel.selectedPhotoType == type ? theme.primary : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Header
@@ -136,11 +255,7 @@ struct HockeyCardCreationView: View {
     // MARK: - Title Section
     private var titleSection: some View {
         VStack(spacing: 12) {
-            Text("Create your custom hockey card in a few simple steps.")
-                .font(theme.fonts.body)
-                .foregroundColor(theme.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .lineSpacing(4)
+            // Removed redundant description - educational card below is more useful
         }
     }
 
@@ -153,16 +268,136 @@ struct HockeyCardCreationView: View {
                 .foregroundColor(theme.primary)
                 .tracking(1)
 
-            Text("Upload a photo of yourself in hockey gear or any photo.")
+            Text("Upload a photo and we'll help you create the perfect card.")
                 .font(theme.fonts.caption)
                 .foregroundColor(theme.textSecondary)
 
+            // Show educational info before upload
+            if viewModel.playerPhotos.isEmpty {
+                photoTypeEducationalCard
+            }
+
+            // Show uploaded photo
             if let image = viewModel.playerPhotos.first {
                 photoThumbnail(image: image, index: 0)
-            } else {
+
+                // Show selected photo type info after categorization
+                if let photoType = viewModel.selectedPhotoType {
+                    photoTypeInfoCard(photoType)
+                }
+            }
+
+            // Upload button (always visible if no photo)
+            if viewModel.playerPhotos.isEmpty {
                 addPhotoButton
             }
         }
+    }
+
+    // MARK: - Photo Type Educational Card
+    private var photoTypeEducationalCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Photo Types We Support:")
+                .font(theme.fonts.bodyBold)
+                .foregroundColor(.white)
+
+            ForEach(PhotoUploadType.allCases, id: \.self) { type in
+                photoTypeInfoRow(type: type)
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.accent)
+
+                Text("Don't worry - you can choose which type after uploading!")
+                    .font(theme.fonts.caption)
+                    .foregroundColor(theme.textSecondary)
+                    .italic()
+            }
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .background(theme.surface.opacity(0.3))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.primary.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private func photoTypeInfoRow(type: PhotoUploadType) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(theme.primary.opacity(0.15))
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: type.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(theme.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(type.rawValue)
+                    .font(theme.fonts.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                Text(type.description)
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.textSecondary)
+                    .lineSpacing(2)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(theme.success)
+                    Text(type.pros)
+                        .font(.system(size: 11))
+                        .foregroundColor(theme.textSecondary.opacity(0.8))
+                }
+                .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func photoTypeInfoCard(_ type: PhotoUploadType) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(theme.primary)
+
+                Text("Photo Type: \(type.rawValue)")
+                    .font(theme.fonts.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(theme.primary)
+
+                Spacer()
+
+                Button(action: {
+                    viewModel.showingPhotoTypePicker = true
+                }) {
+                    Text("Change")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(theme.accent)
+                }
+            }
+
+            Text(type.description)
+                .font(theme.fonts.caption)
+                .foregroundColor(theme.textSecondary)
+                .lineSpacing(2)
+        }
+        .padding(12)
+        .background(theme.primary.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(theme.primary.opacity(0.3), lineWidth: 1)
+        )
     }
 
     private var addPhotoButton: some View {
@@ -212,13 +447,15 @@ struct HockeyCardCreationView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("Upload a photo of yourself in hockey gear or any photo")
+            Text("Choose an action shot, headshot, full body, or hockey gear photo")
         }
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerMultiple(
                 sourceType: viewModel.photoSourceType,
                 onImagePicked: { image in
                     viewModel.addPhoto(image)
+                    // Show photo type picker after upload
+                    viewModel.showingPhotoTypePicker = true
                 }
             )
         }
@@ -365,50 +602,122 @@ struct HockeyCardCreationView: View {
 
     // MARK: - Jersey Selection Section
     private var jerseySelectionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             Label("JERSEY STYLE", systemImage: "tshirt.fill")
                 .font(theme.fonts.caption)
                 .fontWeight(.bold)
                 .foregroundColor(theme.primary)
                 .tracking(1)
 
-            Text("Select a jersey style for your card.")
-                .font(theme.fonts.caption)
-                .foregroundColor(theme.textSecondary)
+            // Jersey options - single column list for better readability
+            VStack(spacing: 12) {
+                if viewModel.shouldShowUsePhotoOption {
+                    jerseyOptionRow(
+                        icon: "photo.fill",
+                        title: "Use Photo Jersey",
+                        description: "Jersey from your uploaded photo",
+                        isSelected: viewModel.selectedJerseyOption == .usePhoto,
+                        action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                viewModel.selectedJerseyOption = .usePhoto
+                            }
+                        }
+                    )
+                }
 
-            // Jersey options grid
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                jerseyOptionCard(
-                    icon: "photo.fill",
-                    title: "Use Photo",
-                    description: "Jersey in Photo",
-                    isSelected: viewModel.selectedJerseyOption == .usePhoto,
-                    action: { viewModel.selectedJerseyOption = .usePhoto }
-                )
-
-                jerseyOptionCard(
+                jerseyOptionRow(
                     icon: "hockey.puck.fill",
                     title: "NHL Team",
-                    description: "Official Teams",
+                    description: "Choose from official NHL teams",
                     isSelected: viewModel.selectedJerseyOption == .nhl,
-                    action: { viewModel.selectedJerseyOption = .nhl }
+                    action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            viewModel.selectedJerseyOption = .nhl
+                        }
+                    }
                 )
 
-                jerseyOptionCard(
+                jerseyOptionRow(
                     icon: "star.fill",
                     title: "STY Athletic",
-                    description: "Premium Brand",
+                    description: "Premium branded design",
                     isSelected: viewModel.selectedJerseyOption == .sty,
-                    action: { viewModel.selectedJerseyOption = .sty }
+                    action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            viewModel.selectedJerseyOption = .sty
+                        }
+                    }
                 )
             }
 
-            // Sub-selection view
+            // Sub-selection view with better spacing
             if let selectedOption = viewModel.selectedJerseyOption {
                 subSelectionView(for: selectedOption)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .padding(.top, 8)
             }
         }
+    }
+
+    // New row-based design for jersey options
+    private func jerseyOptionRow(
+        icon: String,
+        title: String,
+        description: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: {
+            HapticManager.shared.playSelection()
+            action()
+        }) {
+            HStack(spacing: 16) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? theme.primary : theme.surface.opacity(0.6))
+                        .frame(width: 52, height: 52)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(isSelected ? .black : theme.primary)
+                }
+
+                // Text content
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(theme.fonts.bodyBold)
+                        .foregroundColor(.white)
+
+                    Text(description)
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.textSecondary)
+                }
+
+                Spacer()
+
+                // Selection indicator
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(theme.primary)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(theme.textSecondary.opacity(0.3))
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isSelected ? theme.primary.opacity(0.12) : theme.surface.opacity(0.3))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? theme.primary : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     private func jerseyOptionCard(
@@ -463,13 +772,7 @@ struct HockeyCardCreationView: View {
 
     @ViewBuilder
     private func subSelectionView(for option: JerseyOption) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("CONFIGURATION", systemImage: "slider.horizontal.3")
-                .font(theme.fonts.caption)
-                .fontWeight(.bold)
-                .foregroundColor(theme.primary)
-                .tracking(1)
-
+        VStack(alignment: .leading, spacing: 0) {
             switch option {
             case .usePhoto:
                 usePhotoJerseyPreview
@@ -479,48 +782,64 @@ struct HockeyCardCreationView: View {
                 styJerseyPreview
             }
         }
-        .padding(20)
-        .background(theme.surface.opacity(0.3))
-        .cornerRadius(24)
+        .padding(16)
+        .background(theme.primary.opacity(0.08))
+        .cornerRadius(16)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(theme.primary.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.primary.opacity(0.3), lineWidth: 1)
         )
     }
 
 
     private var nhlTeamSelectionView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             if let selectedTeam = viewModel.selectedNHLTeam {
-                HStack {
-                    VStack(alignment: .leading) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(theme.success.opacity(0.2))
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(theme.success)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(selectedTeam.city)
-                            .font(theme.fonts.caption)
+                            .font(.system(size: 13))
                             .foregroundColor(theme.textSecondary)
                         Text(selectedTeam.name)
-                            .font(theme.fonts.title)
+                            .font(theme.fonts.bodyBold)
                             .foregroundColor(.white)
                     }
+
                     Spacer()
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title)
-                        .foregroundColor(theme.success)
                 }
+                .padding(.bottom, 12)
             }
 
             Button(action: {
                 viewModel.showingNHLTeamPicker = true
             }) {
-                HStack {
+                HStack(spacing: 12) {
+                    Image(systemName: viewModel.selectedNHLTeam == nil ? "plus.circle.fill" : "arrow.triangle.2.circlepath")
+                        .font(.system(size: 18))
+                        .foregroundColor(theme.primary)
+
                     Text(viewModel.selectedNHLTeam == nil ? "Select Team" : "Change Team")
-                        .font(theme.fonts.button)
-                        .fontWeight(.bold)
+                        .font(theme.fonts.bodyBold)
+                        .foregroundColor(.white)
+
                     Spacer()
+
                     Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(theme.textSecondary)
                 }
-                .foregroundColor(.white)
-                .padding(16)
-                .background(theme.primary.opacity(0.2))
+                .padding(14)
+                .background(theme.surface.opacity(0.5))
                 .cornerRadius(12)
             }
         }
@@ -530,47 +849,55 @@ struct HockeyCardCreationView: View {
     }
 
     private var usePhotoJerseyPreview: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(theme.success)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(theme.success.opacity(0.2))
+                    .frame(width: 44, height: 44)
 
-            VStack(alignment: .leading, spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(theme.success)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Jersey from Your Photo")
-                    .font(theme.fonts.headline)
+                    .font(theme.fonts.bodyBold)
                     .foregroundColor(.white)
 
-                Text("The jersey in your uploaded photo will be used")
-                    .font(theme.fonts.caption)
+                Text("Using the jersey in your uploaded photo")
+                    .font(.system(size: 13))
                     .foregroundColor(theme.textSecondary)
             }
+
             Spacer()
         }
-        .padding(16)
-        .background(theme.success.opacity(0.1))
-        .cornerRadius(16)
     }
 
     private var styJerseyPreview: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "star.circle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(theme.primary)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(theme.success.opacity(0.2))
+                    .frame(width: 44, height: 44)
 
-            VStack(alignment: .leading, spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(theme.success)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text("STY Athletic Official")
-                    .font(theme.fonts.headline)
+                    .font(theme.fonts.bodyBold)
                     .foregroundColor(.white)
 
-                Text("Premium branded design")
-                    .font(theme.fonts.caption)
+                Text("Premium branded hockey design")
+                    .font(.system(size: 13))
                     .foregroundColor(theme.textSecondary)
             }
+
             Spacer()
         }
-        .padding(16)
-        .background(theme.primary.opacity(0.1))
-        .cornerRadius(16)
     }
 
     // MARK: - Bottom CTA
@@ -758,6 +1085,7 @@ class HockeyCardCreationViewModel: ObservableObject {
     @Published var jerseyNumber: String = ""
     @Published var position: Position? = nil
     @Published var playerPhotos: [UIImage] = []
+    @Published var selectedPhotoType: PhotoUploadType? = nil
 
     // Jersey Selection Fields
     @Published var selectedJerseyOption: JerseyOption? = nil
@@ -769,12 +1097,13 @@ class HockeyCardCreationViewModel: ObservableObject {
     @Published var showingPositionEditor = false
     @Published var showingPhotoOptions = false
     @Published var showingImagePicker = false
+    @Published var showingPhotoTypePicker = false
     @Published var showingNHLTeamPicker = false
     @Published var photoSourceType: UIImagePickerController.SourceType = .photoLibrary
     @Published var currentPhotoIndex: Int = 0
 
     var isPlayerInfoComplete: Bool {
-        !playerName.isEmpty && !jerseyNumber.isEmpty && position != nil && !playerPhotos.isEmpty
+        !playerName.isEmpty && !jerseyNumber.isEmpty && position != nil && !playerPhotos.isEmpty && selectedPhotoType != nil
     }
 
     var isJerseySelectionComplete: Bool {
@@ -794,6 +1123,23 @@ class HockeyCardCreationViewModel: ObservableObject {
         isPlayerInfoComplete && isJerseySelectionComplete
     }
 
+    // Check if "Use Photo" option should be shown based on selected photo type
+    var shouldShowUsePhotoOption: Bool {
+        guard let photoType = selectedPhotoType else {
+            // If no photo type selected yet, show all options
+            return true
+        }
+
+        // Only show "Use Photo" for action shots and hockey gear photos
+        // Hide it for headshots and full body photos (no jersey to extract)
+        switch photoType {
+        case .actionShot, .hockeyGear:
+            return true
+        case .headshot, .fullBody:
+            return false
+        }
+    }
+
     init() {
         loadProfileData()
 
@@ -804,7 +1150,26 @@ class HockeyCardCreationViewModel: ObservableObject {
         ) { [weak self] _ in
             self?.loadProfileData()
         }
+
+        // Watch for photo type changes and auto-reset jersey selection if needed
+        setupPhotoTypeObserver()
     }
+
+    private func setupPhotoTypeObserver() {
+        $selectedPhotoType
+            .sink { [weak self] photoType in
+                guard let self = self else { return }
+
+                // If "Use Photo" is selected but photo type changes to one that doesn't support it
+                if self.selectedJerseyOption == .usePhoto && !self.shouldShowUsePhotoOption {
+                    // Auto-deselect to prevent invalid state
+                    self.selectedJerseyOption = nil
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private var cancellables = Set<AnyCancellable>()
 
     private func loadProfileData() {
         if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
@@ -853,7 +1218,8 @@ class HockeyCardCreationViewModel: ObservableObject {
             jerseyNumber: jerseyNumber,
             position: position ?? .center,
             playerPhoto: playerPhotos.first ?? UIImage(),
-            playerPhotos: playerPhotos
+            playerPhotos: playerPhotos,
+            photoUploadType: selectedPhotoType
         )
     }
 

@@ -394,6 +394,76 @@ struct PlayerCardInfo {
     let position: Position
     let playerPhoto: UIImage  // Primary photo (backwards compatibility)
     let playerPhotos: [UIImage]  // All reference photos (1-3 images)
+    let photoUploadType: PhotoUploadType?  // Type of photo uploaded
+}
+
+// MARK: - Photo Upload Type
+enum PhotoUploadType: String, CaseIterable {
+    case actionShot = "Action Shot"
+    case headshot = "Headshot"
+    case fullBody = "Full Body"
+    case hockeyGear = "Hockey Gear"
+
+    var icon: String {
+        switch self {
+        case .actionShot: return "figure.hockey"
+        case .headshot: return "person.crop.circle.fill"
+        case .fullBody: return "figure.stand"
+        case .hockeyGear: return "sportscourt.fill"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .actionShot:
+            return "AI copies your exact pose and jersey from the photo"
+        case .headshot:
+            return "AI generates a hockey card pose using your face"
+        case .fullBody:
+            return "AI recreates your pose in hockey gear"
+        case .hockeyGear:
+            return "AI uses your gear and position on the card"
+        }
+    }
+
+    var pros: String {
+        switch self {
+        case .actionShot:
+            return "Most authentic look, keeps your real pose and jersey"
+        case .headshot:
+            return "Works with any casual photo, easy to take"
+        case .fullBody:
+            return "Captures your stance and body position naturally"
+        case .hockeyGear:
+            return "Shows your actual equipment and team colors"
+        }
+    }
+
+    var cons: String {
+        switch self {
+        case .actionShot:
+            return "Requires a good quality action photo"
+        case .headshot:
+            return "AI generates the pose, less personalized"
+        case .fullBody:
+            return "Needs clear full-body visibility"
+        case .hockeyGear:
+            return "Requires photo in full hockey equipment"
+        }
+    }
+
+    var uploadTip: String {
+        switch self {
+        case .actionShot:
+            return "Upload a photo of yourself playing hockey"
+        case .headshot:
+            return "Upload a clear photo of your face"
+        case .fullBody:
+            return "Upload a full-body photo with clear visibility"
+        case .hockeyGear:
+            return "Upload a photo of yourself in full hockey gear"
+        }
+    }
 }
 
 // MARK: - NHL Team Picker Sheet
