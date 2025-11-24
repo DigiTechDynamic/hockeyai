@@ -41,7 +41,7 @@ struct InlineRatingWidget: View {
 
             // Title
             VStack(spacing: theme.spacing.sm) {
-                Text("Enjoying Snap Hockey?")
+                Text("Enjoying SnapHockey?")
                     .font(.system(size: 26, weight: .bold))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)

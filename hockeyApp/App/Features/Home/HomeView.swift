@@ -198,7 +198,7 @@ struct HockeyCardGeneratorCard: View {
                         .layoutPriority(1)
                         .padding(.top, 4)
 
-                    Text("Turn yourself into a pro with AI")
+                    Text("Create your custom hockey card")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(theme.textSecondary)
                         .lineLimit(2)
@@ -226,35 +226,12 @@ struct HockeyCardGeneratorCard: View {
                             .rotationEffect(.degrees(12))
                             .shadow(color: .black.opacity(0.5), radius: 15, x: 8, y: 8)
                     } else {
-                        // Default Placeholder (Generic)
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(white: 0.2),
-                                        Color(white: 0.1)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 110, height: 150)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.6), .clear],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .overlay(
-                                Image(systemName: "figure.hockey")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.white.opacity(0.9))
-                            )
+                        // Placeholder Hockey Card
+                        Image("PlaceholderHockeyCard")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 110)
+                            .cornerRadius(6)
                             .rotationEffect(.degrees(12))
                             .shadow(color: .black.opacity(0.5), radius: 15, x: 8, y: 8)
                     }

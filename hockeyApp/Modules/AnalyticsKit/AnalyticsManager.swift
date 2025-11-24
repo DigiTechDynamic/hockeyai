@@ -24,19 +24,24 @@ public final class AnalyticsManager {
 
     /// Track a generic event with optional properties
     public func track(eventName: String, properties: [String: Any]? = nil) {
+        // Add environment context to all events
+        var enrichedProperties = properties ?? [:]
+        enrichedProperties["environment"] = AppEnvironment.current.analyticsProject
+        enrichedProperties["build_type"] = AppEnvironment.current.displayName
+
         #if DEBUG
-        print("[Analytics] \(eventName) -> \(properties ?? [:])")
+        print("[Analytics] [\(AppEnvironment.current.analyticsProject.uppercased())] \(eventName) -> \(enrichedProperties)")
         #endif
 
         // Send to Mixpanel
         #if canImport(Mixpanel)
-        Mixpanel.mainInstance().track(event: eventName, properties: convertToMixpanelProps(properties))
+        Mixpanel.mainInstance().track(event: eventName, properties: convertToMixpanelProps(enrichedProperties))
         Mixpanel.mainInstance().flush()
         #endif
 
         // Send to Firebase Analytics
         #if canImport(FirebaseAnalytics)
-        Analytics.logEvent(eventName, parameters: convertToFirebaseParams(properties))
+        Analytics.logEvent(eventName, parameters: convertToFirebaseParams(enrichedProperties))
         #endif
     }
 
@@ -171,15 +176,9 @@ public final class AnalyticsManager {
         print("[Analytics] Funnel: \(funnel) → Step \(stepNumber)/\(totalSteps): \(step)")
         #endif
 
-        // Track both the specific step name AND a generic funnel_step event
-        // This allows for both specific and aggregated analysis
+        // Track the specific step name for funnel visualization
         #if canImport(Mixpanel)
-        // Track with exact step name for funnel visualization
         Mixpanel.mainInstance().track(event: "\(funnel)_\(step)", properties: convertToMixpanelProps(properties))
-
-        // Also track generic funnel_step for cross-funnel analysis
-        Mixpanel.mainInstance().track(event: "funnel_step", properties: convertToMixpanelProps(properties))
-
         Mixpanel.mainInstance().flush()
         #endif
     }

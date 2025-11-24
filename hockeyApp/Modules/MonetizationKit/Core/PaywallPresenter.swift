@@ -290,20 +290,8 @@ struct PaywallPresenter: View {
 
         trackEvent("purchase_completed", purchaseProperties)
 
-        // Detect if this is a trial product (products ending in "_T" have trials)
-        let hasTrial = productId.hasSuffix("_T")
-        if hasTrial {
-            AnalyticsManager.shared.track(
-                eventName: "trial_started",
-                properties: [
-                    "product_id": productId,
-                    "variant": variant,
-                    "source": source,
-                    "revenue": revenueDouble,
-                    "currency": currencyCode
-                ]
-            )
-        }
+        // Note: trial_started event is automatically tracked by RevenueCat webhook as "rc_trial_started_event"
+        // We don't duplicate it here to avoid double-counting in Mixpanel
     }
 
     // Helper to find package by product ID from loaded products

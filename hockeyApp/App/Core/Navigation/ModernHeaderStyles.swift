@@ -24,7 +24,7 @@ struct MinimalFloatingHeader: View {
             // Header with integrated background that extends into safe area
             HStack {
                 // App name
-                Text("Snap Hockey")
+                Text("SnapHockey")
                     .font(.system(size: 22, weight: .black))
                     .foregroundStyle(
                         LinearGradient(

@@ -21,8 +21,8 @@ struct SplashScreen: View {
         if let nhlTeam = themeManager.getCurrentNHLTeam() {
             return "\(nhlTeam.city) \(nhlTeam.name)".uppercased()
         }
-        // Default to Snap Hockey for STY theme
-        return "SNAP HOCKEY"
+        // Default to SnapHockey for STY theme
+        return "SNAPHOCKEY"
     }
 
     var body: some View {
@@ -78,14 +78,18 @@ struct SplashScreen: View {
                         .opacity(0.5)
 
                     // Logo - white_cropped.png with S and flames
-                    // Snap Hockey Logo
+                    // SnapHockey Logo
                     VStack(spacing: 6) {
-                        Text("Snap Hockey")
+                        Text("SnapHockey")
                             .font(.system(size: 50, weight: .black))
                             .italic()
+                            .kerning(2) // Add letter spacing to ensure space is visible
                             .foregroundColor(.white)
                             .shadow(color: Color.white.opacity(0.4), radius: 8, x: 0, y: 0)
                             .shadow(color: theme.primary.opacity(0.5), radius: 16, x: 0, y: 4)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         Text("CAPTURE YOUR STYLE")
                             .font(.system(size: 12, weight: .heavy))
@@ -136,7 +140,7 @@ struct SplashScreen: View {
             .padding(.horizontal, theme.spacing.xl)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Loading Snap Hockey")
+        .accessibilityLabel("Loading SnapHockey")
         .accessibilityHint("Please wait while the app loads")
         .onAppear {
             animateIn()

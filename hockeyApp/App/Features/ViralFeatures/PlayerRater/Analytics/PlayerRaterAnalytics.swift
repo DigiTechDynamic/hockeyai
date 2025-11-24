@@ -1,6 +1,6 @@
 //
 //  PlayerRaterAnalytics.swift
-//  Snap Hockey
+//  SnapHockey
 //
 //  General analytics utilities for Player Rater (STY Check) feature
 //  NOTE: Use STYValidationAnalytics for onboarding, STYCheckAnalytics for post-onboarding

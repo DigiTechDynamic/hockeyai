@@ -387,14 +387,6 @@ struct HockeyCardCreationView: View {
                 )
 
                 jerseyOptionCard(
-                    icon: "camera.fill",
-                    title: "Custom",
-                    description: "Upload Photo",
-                    isSelected: viewModel.selectedJerseyOption == .custom,
-                    action: { viewModel.selectedJerseyOption = .custom }
-                )
-
-                jerseyOptionCard(
                     icon: "hockey.puck.fill",
                     title: "NHL Team",
                     description: "Official Teams",
@@ -481,8 +473,6 @@ struct HockeyCardCreationView: View {
             switch option {
             case .usePhoto:
                 usePhotoJerseyPreview
-            case .custom:
-                customJerseyUploadView
             case .nhl:
                 nhlTeamSelectionView
             case .sty:
@@ -498,68 +488,6 @@ struct HockeyCardCreationView: View {
         )
     }
 
-    private var customJerseyUploadView: some View {
-        Button(action: {
-            viewModel.showingJerseyPhotoPicker = true
-        }) {
-            if let image = viewModel.customJerseyImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 200)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        ZStack {
-                            Color.black.opacity(0.3)
-                            VStack(spacing: 8) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 24))
-                                Text("Change Photo")
-                                    .font(.headline)
-                            }
-                            .foregroundColor(.white)
-                        }
-                    )
-            } else {
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(theme.primary.opacity(0.1))
-                            .frame(width: 64, height: 64)
-
-                        Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(theme.primary)
-                    }
-
-                    Text("Upload Jersey Photo")
-                        .font(theme.fonts.headline)
-                        .foregroundColor(.white)
-
-                    Text("Select from library")
-                        .font(theme.fonts.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-                .frame(height: 200)
-                .frame(maxWidth: .infinity)
-                .background(theme.surface.opacity(0.3))
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(style: StrokeStyle(lineWidth: 2, dash: [6, 6]))
-                        .foregroundColor(theme.primary.opacity(0.4))
-                )
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $viewModel.showingJerseyPhotoPicker) {
-            JerseyImagePicker(
-                sourceType: .photoLibrary,
-                selectedImage: $viewModel.customJerseyImage
-            )
-        }
-    }
 
     private var nhlTeamSelectionView: some View {
         VStack(spacing: 16) {
@@ -833,7 +761,6 @@ class HockeyCardCreationViewModel: ObservableObject {
 
     // Jersey Selection Fields
     @Published var selectedJerseyOption: JerseyOption? = nil
-    @Published var customJerseyImage: UIImage? = nil
     @Published var selectedNHLTeam: NHLTeam? = nil
 
     // UI State
@@ -842,7 +769,6 @@ class HockeyCardCreationViewModel: ObservableObject {
     @Published var showingPositionEditor = false
     @Published var showingPhotoOptions = false
     @Published var showingImagePicker = false
-    @Published var showingJerseyPhotoPicker = false
     @Published var showingNHLTeamPicker = false
     @Published var photoSourceType: UIImagePickerController.SourceType = .photoLibrary
     @Published var currentPhotoIndex: Int = 0
@@ -857,8 +783,6 @@ class HockeyCardCreationViewModel: ObservableObject {
         switch option {
         case .usePhoto:
             return true
-        case .custom:
-            return customJerseyImage != nil
         case .nhl:
             return selectedNHLTeam != nil
         case .sty:
@@ -939,9 +863,6 @@ class HockeyCardCreationViewModel: ObservableObject {
         switch option {
         case .usePhoto:
             return .usePhoto
-        case .custom:
-            guard let image = customJerseyImage else { return nil }
-            return .custom(jerseyImage: image)
         case .nhl:
             guard let team = selectedNHLTeam else { return nil }
             return .nhl(team: team)

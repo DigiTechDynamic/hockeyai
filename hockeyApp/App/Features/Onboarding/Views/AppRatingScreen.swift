@@ -17,9 +17,9 @@ struct AppRatingScreen: View {
             Spacer()
 
             VStack(spacing: theme.spacing.xl) {
-                // Snap Hockey logo with glow (matching home screen)
+                // SnapHockey logo with glow (matching home screen)
                 VStack(spacing: 6) {
-                    Text("Snap Hockey")
+                    Text("SnapHockey")
                         .font(.system(size: 40, weight: .black))
                         .italic()
                         .foregroundColor(.white)

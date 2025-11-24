@@ -746,7 +746,7 @@ struct StickAnalyzerResultsView: View {
         Top Recommendation:
         \(result.recommendations.topStickModels.first?.displayName ?? "N/A")
         
-        Generated with Snap Hockey
+        Generated with SnapHockey
         """
         
         // In production, this would open a share sheet

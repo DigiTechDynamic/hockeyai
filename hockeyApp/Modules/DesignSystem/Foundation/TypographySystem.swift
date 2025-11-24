@@ -1,12 +1,12 @@
 import SwiftUI
 
-// MARK: - Snap Hockey Typography System
+// MARK: - SnapHockey Typography System
 /// Unified typography system following iOS HIG and best practices
 /// Using 1 font family (SF Pro) with limited weight variations
 public struct TypographySystem {
 
     // MARK: - Display & Branding (Used sparingly)
-    /// 48pt Black - ONLY for SNAP HOCKEY logo/brand
+    /// 48pt Black - ONLY for SNAPHOCKEY logo/brand
     public static let display = Font.system(size: 48, weight: .black, design: .default)
 
     // MARK: - Headers (Navigation & Sections)
@@ -73,7 +73,7 @@ public struct TypographyGuidelines {
     • Tab Bar: tabBar (11pt regular)
 
     🏒 SPECIAL CASES:
-    • SNAP HOCKEY Logo: display (48pt black)
+    • SNAPHOCKEY Logo: display (48pt black)
     • Score Display: largeTitle (34pt bold)
     • Stats Numbers: title (28pt bold)
 

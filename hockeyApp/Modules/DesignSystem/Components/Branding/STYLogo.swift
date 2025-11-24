@@ -331,7 +331,7 @@ struct STYLogo: View {
     private var brandingText: some View {
         if style == .fullBrand {
             VStack(spacing: theme.spacing.xs) {
-                Text("SNAP HOCKEY")
+                Text("SNAPHOCKEY")
                     .font(.system(size: size * 0.28, weight: .black))
                     .foregroundColor(theme.primary)
                     .tracking(3)

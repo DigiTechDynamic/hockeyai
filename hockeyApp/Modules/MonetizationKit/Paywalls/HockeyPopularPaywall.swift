@@ -128,7 +128,7 @@ private struct HockeyPopularPaywallContent: View {
                             restoreButton
                         }
 
-                        Text("Snap Hockey")
+                        Text("SnapHockey")
                             .font(.system(size: 20, weight: .black))
                             .glowingHeaderText()
                     }

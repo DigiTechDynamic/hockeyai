@@ -1,6 +1,6 @@
 //
 //  AIPerformanceAnalytics.swift
-//  Snap Hockey
+//  SnapHockey
 //
 //  Analytics tracking for AI performance and reliability monitoring
 //

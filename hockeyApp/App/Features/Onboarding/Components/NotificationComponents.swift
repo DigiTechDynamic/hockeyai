@@ -20,7 +20,7 @@ struct NotificationPreviewCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Snap Hockey")
+                    Text("SnapHockey")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(theme.textSecondary)
                     Spacer()

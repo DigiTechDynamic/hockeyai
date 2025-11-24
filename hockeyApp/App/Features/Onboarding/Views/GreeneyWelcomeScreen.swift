@@ -21,7 +21,7 @@ struct GreenyWelcomeScreen: View {
 
                 // Hero mark
                 VStack(spacing: 6) {
-                    Text("Snap Hockey")
+                    Text("SnapHockey")
                         .font(.system(size: 42, weight: .black))
                         .italic()
                         .foregroundColor(.white)

@@ -20,7 +20,7 @@ struct PrivacyPolicySheet: View {
                         // Introduction
                         SectionView(
                             title: "Introduction",
-                            content: "Snap Hockey (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application."
+                            content: "SnapHockey (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application."
                         )
 
                         // Information We Collect

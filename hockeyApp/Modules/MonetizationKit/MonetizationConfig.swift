@@ -32,26 +32,24 @@ struct MonetizationConfig {
         )
     ]
 
-    // MARK: - Product IDs by Tier (with and without trials)
+    // MARK: - Product IDs (Only 2 products configured in App Store Connect)
     struct ProductIDs {
-        // Budget Tier (no trials)
-        static let weeklyBudget = "snaphockey_weekly_399"
-        static let monthlyBudget = "snaphockey_monthly_999"
-        static let yearlyBudget = "snaphockey_yearly_3999"
+        // Standard Tier - ONLY these 2 products exist in App Store Connect
+        static let weeklyStandard = "hockeyapp_weekly_499"        // No trial
+        static let yearlyStandardTrial = "hockeyapp_yearly_4999_T" // Has 3-day trial
 
-        // Standard Tier (with and without trials)
-        static let weeklyStandard = "snaphockey_weekly_499"  // No trial version
-        static let monthlyStandardTrial = "snaphockey_monthly_1299_T"  // Has 3-day trial
-        static let yearlyStandardTrial = "snaphockey_yearly_4999_T"   // Has 7-day trial
-        static let monthlyStandardNoTrial = "snaphockey_monthly_1299"  // No trial
-        static let yearlyStandardNoTrial = "snaphockey_yearly_4999"   // No trial
-
-        // Premium Tier (with and without trials)
-        static let weeklyPremium = "snaphockey_weekly_699"  // No trial version
-        static let monthlyPremiumTrial = "snaphockey_monthly_1999_T"  // Has 3-day trial
-        static let yearlyPremiumTrial = "snaphockey_yearly_5999_T"    // Has 7-day trial
-        static let monthlyPremiumNoTrial = "snaphockey_monthly_1999"  // No trial
-        static let yearlyPremiumNoTrial = "snaphockey_yearly_5999"   // No trial
+        // Legacy aliases for backward compatibility
+        static let weeklyBudget = weeklyStandard
+        static let monthlyBudget = weeklyStandard  // Fallback to weekly
+        static let yearlyBudget = yearlyStandardTrial
+        static let monthlyStandardTrial = weeklyStandard  // Fallback to weekly
+        static let yearlyStandardNoTrial = yearlyStandardTrial
+        static let monthlyStandardNoTrial = weeklyStandard  // Fallback to weekly
+        static let weeklyPremium = weeklyStandard
+        static let monthlyPremiumTrial = weeklyStandard  // Fallback to weekly
+        static let yearlyPremiumTrial = yearlyStandardTrial
+        static let monthlyPremiumNoTrial = weeklyStandard  // Fallback to weekly
+        static let yearlyPremiumNoTrial = yearlyStandardTrial
     }
 
     // MARK: - Display Prices by Tier
@@ -117,8 +115,8 @@ struct MonetizationConfig {
 
     // MARK: - Analytics event names
     static let paywallViewedEvent = "paywall_viewed"
-    static let subscriptionPurchasedEvent = "subscription_purchased"
     static let aiAnalysisGatedEvent = "ai_analysis_gated"
+    // Note: subscription_purchased is automatically tracked by RevenueCat webhook as "rc_initial_purchase_event"
 
     // MARK: - Feature gating
     // Coins removed: access is premium-only

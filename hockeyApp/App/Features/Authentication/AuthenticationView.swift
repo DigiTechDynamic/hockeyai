@@ -79,7 +79,7 @@ struct AuthenticationView: View {
                             .shadow(color: theme.primary.opacity(0.3), radius: 20)
                         
                         // STY Text
-                        Text("Snap Hockey")
+                        Text("SnapHockey")
                             .font(.system(size: 42, weight: .black, design: .rounded))
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)

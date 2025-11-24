@@ -184,7 +184,7 @@ struct SharedValidationView: View {
                     }
                     .frame(height: 100)
 
-                    // Text content with enhanced styling like SNAP HOCKEY header
+                    // Text content with enhanced styling like SNAPHOCKEY header
                     VStack(spacing: theme.spacing.sm) {
                         Text(getMainTitle())
                             .font(.system(size: 38, weight: .black))

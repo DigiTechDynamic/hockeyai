@@ -463,11 +463,6 @@ extension ImageGenerationService {
             // Use jersey from player photo - no additional reference needed
             print("🖼️ [ImageGenerationService] Using jersey from player photo")
 
-        case .custom(let jerseyImage):
-            // Use the custom jersey image as reference
-            referenceImages.append(jerseyImage)
-            print("🖼️ [ImageGenerationService] Using custom jersey as reference (image 2)")
-
         case .sty:
             // Load STY jersey from resources
             // Try loading from asset catalog first, then from bundle
@@ -564,17 +559,6 @@ extension ImageGenerationService {
             - Keep all original branding and design elements
             - Ensure clear visibility of jersey number #\(playerInfo.jerseyNumber)
             - Enhance and make the jersey look professional and game-ready
-
-            """
-
-        case .custom(let jerseyImage):
-            prompt += """
-            Jersey: Use the custom jersey shown in reference \(jerseyReferenceText)
-            - Put the player from the first \(photoCount) reference image(s) into this jersey
-            - Recreate the exact jersey design, colors, and style from the jersey reference
-            - Make it look authentic and game-ready
-            - Ensure clear visibility of jersey number #\(playerInfo.jerseyNumber)
-            - Maintain all original branding and design elements from the jersey
 
             """
 

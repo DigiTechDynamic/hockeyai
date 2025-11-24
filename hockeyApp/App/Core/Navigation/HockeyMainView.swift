@@ -161,7 +161,7 @@ struct HockeyMainView: View {
         case 0: return "Home"
         case 1: return "AI Coach"
         case 2: return "Equipment"
-        default: return "Snap Hockey"
+        default: return "SnapHockey"
         }
     }
 

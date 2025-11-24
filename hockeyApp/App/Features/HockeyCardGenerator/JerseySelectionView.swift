@@ -116,16 +116,7 @@ struct JerseySelectionView: View {
     // MARK: - Jersey Options Grid
     private var jerseyOptionsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-            // Option 1: Custom
-            jerseyOptionCard(
-                icon: "camera.fill",
-                title: "Custom",
-                description: "Upload Photo",
-                isSelected: viewModel.selectedOption == .custom,
-                action: { viewModel.selectedOption = .custom }
-            )
-
-            // Option 2: NHL
+            // Option 1: NHL
             jerseyOptionCard(
                 icon: "hockey.puck.fill",
                 title: "NHL Team",
@@ -134,7 +125,7 @@ struct JerseySelectionView: View {
                 action: { viewModel.selectedOption = .nhl }
             )
 
-            // Option 3: STY (Full width)
+            // Option 2: STY
             jerseyOptionCard(
                 icon: "star.fill",
                 title: "STY Athletic",
@@ -142,7 +133,6 @@ struct JerseySelectionView: View {
                 isSelected: viewModel.selectedOption == .sty,
                 action: { viewModel.selectedOption = .sty }
             )
-            .gridCellColumns(2)
         }
     }
 
@@ -212,8 +202,6 @@ struct JerseySelectionView: View {
             switch option {
             case .usePhoto:
                 usePhotoJerseyPreview
-            case .custom:
-                customJerseyUploadView
             case .nhl:
                 nhlTeamSelectionView
             case .sty:
@@ -227,72 +215,6 @@ struct JerseySelectionView: View {
             RoundedRectangle(cornerRadius: 24)
                 .stroke(theme.primary.opacity(0.2), lineWidth: 1)
         )
-    }
-
-    // MARK: - Custom Jersey Upload
-    private var customJerseyUploadView: some View {
-        Button(action: {
-            viewModel.showingJerseyPhotoPicker = true
-        }) {
-            if let image = viewModel.customJerseyImage {
-                // Show selected jersey
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 200)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        ZStack {
-                            Color.black.opacity(0.3)
-                            VStack(spacing: 8) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 24))
-                                Text("Change Photo")
-                                    .font(.headline)
-                            }
-                            .foregroundColor(.white)
-                        }
-                    )
-            } else {
-                // Empty state
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(theme.primary.opacity(0.1))
-                            .frame(width: 64, height: 64)
-                        
-                        Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(theme.primary)
-                    }
-
-                    Text("Upload Jersey Photo")
-                        .font(theme.fonts.headline)
-                        .foregroundColor(.white)
-
-                    Text("Select from library")
-                        .font(theme.fonts.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-                .frame(height: 200)
-                .frame(maxWidth: .infinity)
-                .background(theme.surface.opacity(0.3))
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(style: StrokeStyle(lineWidth: 2, dash: [6, 6]))
-                        .foregroundColor(theme.primary.opacity(0.4))
-                )
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $viewModel.showingJerseyPhotoPicker) {
-            JerseyImagePicker(
-                sourceType: .photoLibrary,
-                selectedImage: $viewModel.customJerseyImage
-            )
-        }
     }
 
     // MARK: - NHL Team Selection
@@ -420,9 +342,7 @@ struct JerseySelectionView: View {
 // MARK: - Jersey Selection View Model
 class JerseySelectionViewModel: ObservableObject {
     @Published var selectedOption: JerseyOption? = nil
-    @Published var customJerseyImage: UIImage? = nil
     @Published var selectedNHLTeam: NHLTeam? = nil
-    @Published var showingJerseyPhotoPicker = false
     @Published var showingNHLTeamPicker = false
 
     var canContinue: Bool {
@@ -431,8 +351,6 @@ class JerseySelectionViewModel: ObservableObject {
         switch option {
         case .usePhoto:
             return true
-        case .custom:
-            return customJerseyImage != nil
         case .nhl:
             return selectedNHLTeam != nil
         case .sty:
@@ -446,9 +364,6 @@ class JerseySelectionViewModel: ObservableObject {
         switch option {
         case .usePhoto:
             return .usePhoto
-        case .custom:
-            guard let image = customJerseyImage else { return nil }
-            return .custom(jerseyImage: image)
         case .nhl:
             guard let team = selectedNHLTeam else { return nil }
             return .nhl(team: team)
@@ -461,7 +376,6 @@ class JerseySelectionViewModel: ObservableObject {
 // MARK: - Jersey Option Enum
 enum JerseyOption {
     case usePhoto
-    case custom
     case nhl
     case sty
 }
@@ -469,7 +383,6 @@ enum JerseyOption {
 // MARK: - Jersey Selection Result
 enum JerseySelection {
     case usePhoto
-    case custom(jerseyImage: UIImage)
     case nhl(team: NHLTeam)
     case sty
 }
@@ -548,41 +461,3 @@ struct NHLTeamPickerSheet: View {
     }
 }
 
-// MARK: - Jersey Image Picker
-struct JerseyImagePicker: UIViewControllerRepresentable {
-    let sourceType: UIImagePickerController.SourceType
-    @Binding var selectedImage: UIImage?
-    @Environment(\.dismiss) var dismiss
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = sourceType
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: JerseyImagePicker
-
-        init(_ parent: JerseyImagePicker) {
-            self.parent = parent
-        }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.selectedImage = image
-            }
-            parent.dismiss()
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
-    }
-}

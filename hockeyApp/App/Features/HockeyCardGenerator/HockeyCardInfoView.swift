@@ -316,6 +316,7 @@ struct HockeyCardInfoView: View {
                     title: "Name",
                     value: viewModel.playerName.isEmpty ? "Enter Name" : viewModel.playerName,
                     icon: "person.fill",
+                    customIcon: "icon_player_profile", // Use new custom asset
                     isSet: !viewModel.playerName.isEmpty,
                     action: { viewModel.showingNameEditor = true }
                 )
@@ -344,7 +345,7 @@ struct HockeyCardInfoView: View {
         .sheet(isPresented: $viewModel.showingPositionEditor) { positionEditorSheet }
     }
 
-    private func modernInputRow(title: String, value: String, icon: String, isSet: Bool, action: @escaping () -> Void) -> some View {
+    private func modernInputRow(title: String, value: String, icon: String, customIcon: String? = nil, isSet: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 16) {
                 // Icon container
@@ -353,9 +354,18 @@ struct HockeyCardInfoView: View {
                         .fill(isSet ? theme.primary.opacity(0.15) : theme.surface)
                         .frame(width: 44, height: 44)
                     
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(isSet ? theme.primary : theme.textSecondary)
+                    if let customIcon = customIcon, let uiImage = UIImage(named: customIcon) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
+                            .frame(width: 24, height: 24) // Slightly larger for custom icons
+                            .foregroundColor(isSet ? theme.primary : theme.textSecondary)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(isSet ? theme.primary : theme.textSecondary)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {

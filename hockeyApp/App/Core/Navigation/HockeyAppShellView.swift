@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Snap Hockey Shell View
+// MARK: - SnapHockey Shell View
 struct SnapHockeyShellView<Header: View, Tabs: View, Content: View, Bottom: View>: View {
     let header: Header
     let tabs: Tabs
