@@ -13,6 +13,7 @@ struct CardGenerationView: View {
     @State private var showCard = false
     @State private var cardScale: CGFloat = 0.8
     @State private var cardRotation: Double = 10
+    @State private var showingPaywall = false
 
     init(playerInfo: PlayerCardInfo, jerseySelection: JerseySelection, onDismiss: @escaping () -> Void) {
         self.playerInfo = playerInfo
@@ -82,6 +83,9 @@ struct CardGenerationView: View {
         .navigationBarHidden(true)
         .onAppear {
             viewModel.generateCard()
+        }
+        .fullScreenCover(isPresented: $showingPaywall) {
+            PaywallPresenter(source: "card_result_upsell")
         }
     }
 
@@ -307,6 +311,34 @@ struct CardGenerationView: View {
                             .stroke(theme.primary.opacity(0.5), lineWidth: 1)
                     )
                 }
+                
+                // Upsell for free users
+                if !MonetizationManager.shared.isPremium {
+                    Button(action: {
+                        HapticManager.shared.playSelection()
+                        showingPaywall = true
+                    }) {
+                        HStack {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.yellow)
+                            Text("Unlock Unlimited Cards")
+                                .font(theme.fonts.button)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(
+                            RoundedRectangle(cornerRadius: 28)
+                                .fill(theme.surface.opacity(0.3))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28)
+                                .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+                        )
+                    }
+                }
 
             } else {
                 // Close button for error state
@@ -392,6 +424,10 @@ class CardGenerationViewModel: ObservableObject {
                     // Delay slightly to show 100%
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self?.generatedCard = image
+                        
+                        // Increment generation count (handles both free and daily limits)
+                        MonetizationManager.shared.incrementHockeyCardGenerationCount()
+                        
                         // Calculate dominant color
                         if let averageColor = image.averageColor {
                             self?.dominantColor = Color(averageColor)

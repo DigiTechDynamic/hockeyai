@@ -10,6 +10,8 @@ struct HockeyCardCreationView: View {
 
     @State private var showingCardGeneration = false
     @State private var showingHistory = false
+    @State private var showingPaywall = false
+    @State private var showingDailyLimitAlert = false
 
     var body: some View {
         ZStack {
@@ -86,11 +88,19 @@ struct HockeyCardCreationView: View {
                 )
             }
         }
-        .sheet(isPresented: $showingHistory) {
+        .fullScreenCover(isPresented: $showingHistory) {
             CardHistoryView()
+        }
+        .fullScreenCover(isPresented: $showingPaywall) {
+            PaywallPresenter(source: "hockey_card_limit")
         }
         .sheet(isPresented: $viewModel.showingPhotoTypePicker) {
             photoTypePickerSheet
+        }
+        .alert("Daily Limit Reached", isPresented: $showingDailyLimitAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("You've reached your daily limit of 5 cards. Please come back tomorrow!")
         }
     }
 
@@ -901,7 +911,18 @@ struct HockeyCardCreationView: View {
     private var bottomCTA: some View {
         Button(action: {
             HapticManager.shared.playSelection()
-            showingCardGeneration = true
+            
+            if MonetizationManager.shared.canGenerateHockeyCard() {
+                showingCardGeneration = true
+            } else {
+                if MonetizationManager.shared.isPremium {
+                    // Pro user hit daily limit
+                    showingDailyLimitAlert = true
+                } else {
+                    // Free user hit lifetime limit
+                    showingPaywall = true
+                }
+            }
         }) {
             HStack {
                 Text("Generate Card")
