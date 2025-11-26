@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Card Generation View
 /// Final screen that generates and displays the hockey card
@@ -28,51 +29,39 @@ struct CardGenerationView: View {
     var body: some View {
         ZStack {
             theme.background.ignoresSafeArea()
-            
-            // Ambient background glow
-            GeometryReader { proxy in
-                Circle()
-                    .fill(theme.primary.opacity(0.1))
-                    .frame(width: proxy.size.width * 1.2)
-                    .blur(radius: 60)
-                    .offset(x: -proxy.size.width * 0.3, y: proxy.size.height * 0.2)
-                
-                Circle()
-                    .fill(theme.accent.opacity(0.1))
-                    .frame(width: proxy.size.width)
-                    .blur(radius: 50)
-                    .offset(x: proxy.size.width * 0.4, y: -proxy.size.height * 0.3)
-            }
-            .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header
-                header
-
                 // Content
-                ScrollView {
-                    VStack(spacing: 32) {
-                        // Status or result
-                        if viewModel.isGenerating {
-                            generatingView
-                        } else if let error = viewModel.error {
-                            errorView(error: error)
-                        } else if let generatedCard = viewModel.generatedCard {
-                            generatedCardView(image: generatedCard)
-                        } else {
-                            // Initial state - should auto-generate
-                            generatingView
-                        }
-
+                if viewModel.isGenerating {
+                    // Full-screen processing view (matches other AI features)
+                    CardGenerationProcessingView(viewModel: viewModel, onCancel: onDismiss)
+                } else if let error = viewModel.error {
+                    // Header for error state
+                    header
+                    ScrollView {
+                        errorView(error: error)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
                         Spacer(minLength: 80)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .scrollIndicators(.hidden)
+                } else if let generatedCard = viewModel.generatedCard {
+                    // Header for result state
+                    header
+                    ScrollView {
+                        generatedCardView(image: generatedCard)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                        Spacer(minLength: 80)
+                    }
+                    .scrollIndicators(.hidden)
+                } else {
+                    // Initial state - should auto-generate
+                    CardGenerationProcessingView(viewModel: viewModel, onCancel: onDismiss)
                 }
-                .scrollIndicators(.hidden)
             }
-            
-            // Bottom actions
+
+            // Bottom actions (only when not generating)
             if !viewModel.isGenerating {
                 VStack {
                     Spacer()
@@ -97,7 +86,7 @@ struct CardGenerationView: View {
                     Circle()
                         .fill(theme.surface.opacity(0.5))
                         .frame(width: 40, height: 40)
-                    
+
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
@@ -106,7 +95,7 @@ struct CardGenerationView: View {
 
             Spacer()
 
-            Text(viewModel.isGenerating ? "Generating..." : "Your Card")
+            Text("Your Card")
                 .font(.system(size: 20, weight: .black))
                 .glowingHeaderText()
 
@@ -122,84 +111,6 @@ struct CardGenerationView: View {
                 .blur(radius: 20)
                 .ignoresSafeArea()
         )
-    }
-
-    // MARK: - Generating View
-    private var generatingView: some View {
-        VStack(spacing: 40) {
-            // Animation
-            ZStack {
-                // Pulsing circles
-                ForEach(0..<3) { i in
-                    Circle()
-                        .stroke(theme.primary.opacity(0.3), lineWidth: 2)
-                        .frame(width: 100 + CGFloat(i * 40), height: 100 + CGFloat(i * 40))
-                        .scaleEffect(viewModel.rotationAngle > 0 ? 1.1 : 1.0)
-                        .opacity(viewModel.rotationAngle > 0 ? 0 : 1)
-                        .animation(
-                            Animation.easeOut(duration: 2)
-                                .repeatForever(autoreverses: false)
-                                .delay(Double(i) * 0.4),
-                            value: viewModel.rotationAngle
-                        )
-                }
-                
-                // Center icon
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 48))
-                    .foregroundColor(theme.primary)
-                    .rotationEffect(.degrees(viewModel.rotationAngle))
-                    .animation(.linear(duration: 4).repeatForever(autoreverses: false), value: viewModel.rotationAngle)
-            }
-            .padding(.top, 60)
-
-            VStack(spacing: 16) {
-                // Large neon title removed per user feedback
-
-                Text("Our AI is crafting a pro-level hockey card just for you.")
-                    .font(theme.fonts.body)
-                    .foregroundColor(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-            .padding(.horizontal, 20)
-
-            // Progress Bar
-            VStack(spacing: 8) {
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        // Background
-                        Capsule()
-                            .fill(theme.surface.opacity(0.3))
-                            .frame(height: 8)
-
-                        // Fill
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [theme.primary, theme.accent],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: geometry.size.width * viewModel.progress, height: 8)
-                            .animation(.linear(duration: 0.1), value: viewModel.progress)
-                    }
-                }
-                .frame(height: 8)
-
-                HStack {
-                    Text("\(Int(viewModel.progress * 100))%")
-                        .font(theme.fonts.caption)
-                        .foregroundColor(theme.textSecondary)
-                    Spacer()
-                    Text(viewModel.loadingStage)
-                        .font(theme.fonts.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-            }
-            .padding(.horizontal, 40)
-        }
     }
 
     // MARK: - Error View
@@ -255,8 +166,6 @@ struct CardGenerationView: View {
     private func generatedCardView(image: UIImage) -> some View {
         VStack(spacing: 32) {
             VStack(spacing: 8) {
-                // Large neon title removed per user feedback
-
                 Text("Your custom hockey card is ready")
                     .font(theme.fonts.body)
                     .foregroundColor(theme.textSecondary)
@@ -289,8 +198,8 @@ struct CardGenerationView: View {
     // MARK: - Bottom Actions
     private var bottomActions: some View {
         VStack(spacing: 16) {
-            if let generatedCard = viewModel.generatedCard {
-                // Save to Photos button (styled like the old Share button)
+            if let _ = viewModel.generatedCard {
+                // Save to Photos button
                 Button(action: {
                     viewModel.saveCard()
                 }) {
@@ -311,7 +220,7 @@ struct CardGenerationView: View {
                             .stroke(theme.primary.opacity(0.5), lineWidth: 1)
                     )
                 }
-                
+
                 // Upsell for free users
                 if !MonetizationManager.shared.isPremium {
                     Button(action: {
@@ -364,35 +273,305 @@ struct CardGenerationView: View {
     }
 }
 
+// MARK: - Card Generation Processing View
+/// Modern processing view matching other AI analyzer features
+struct CardGenerationProcessingView: View {
+    @Environment(\.theme) var theme
+    @ObservedObject var viewModel: CardGenerationViewModel
+    let onCancel: () -> Void
+
+    // Animation states
+    @State private var pulseAnimation = false
+    @State private var showPercentage = false
+    @State private var showCancelConfirm = false
+
+    // Haptic feedback
+    private let impactGenerator = UIImpactFeedbackGenerator(style: .light)
+    @State private var hapticTimer: Timer?
+
+    var body: some View {
+        ZStack {
+            // Background
+            theme.background.ignoresSafeArea()
+
+            // Subtle radial glow
+            RadialGradient(
+                colors: [theme.primary.opacity(0.08), Color.clear],
+                center: .top,
+                startRadius: 50,
+                endRadius: 400
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Spacer()
+
+                // Main content
+                VStack(spacing: theme.spacing.xxl) {
+                    // Icon with glow effects
+                    ZStack {
+                        // Outer glow layer
+                        Circle()
+                            .fill(theme.primary)
+                            .frame(width: 120, height: 120)
+                            .blur(radius: 35)
+                            .opacity(pulseAnimation ? 0.5 : 0.3)
+                            .scaleEffect(pulseAnimation ? 1.3 : 1.0)
+                            .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: pulseAnimation)
+
+                        // Mid glow layer
+                        Circle()
+                            .fill(theme.primary.opacity(0.4))
+                            .frame(width: 100, height: 100)
+                            .blur(radius: 20)
+                            .scaleEffect(pulseAnimation ? 1.15 : 0.95)
+                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: pulseAnimation)
+
+                        // Outer pulsing ring
+                        Circle()
+                            .stroke(theme.primary.opacity(0.3), lineWidth: 2)
+                            .frame(width: 110, height: 110)
+                            .scaleEffect(pulseAnimation ? 1.25 : 1.0)
+                            .opacity(pulseAnimation ? 0 : 0.6)
+                            .animation(.easeOut(duration: 2.0).repeatForever(autoreverses: false), value: pulseAnimation)
+
+                        // Inner circle background
+                        Circle()
+                            .stroke(theme.divider.opacity(0.3), lineWidth: 3)
+                            .frame(width: 90, height: 90)
+
+                        // Progress circle
+                        Circle()
+                            .trim(from: 0, to: viewModel.progress)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [theme.primary, theme.primary.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                            )
+                            .frame(width: 90, height: 90)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.linear(duration: 0.5), value: viewModel.progress)
+
+                        // Center icon - hockey card themed
+                        Image(systemName: "rectangle.portrait.on.rectangle.portrait.angled.fill")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(theme.primary)
+                            .shadow(color: theme.primary.opacity(0.8), radius: 4)
+                            .shadow(color: theme.primary.opacity(0.5), radius: 10)
+                            .shadow(color: theme.primary.opacity(0.3), radius: 20)
+                            .scaleEffect(pulseAnimation ? 1.05 : 0.95)
+                            .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: pulseAnimation)
+                    }
+                    .frame(height: 120)
+
+                    // Title and phase with athletic styling
+                    VStack(spacing: theme.spacing.md) {
+                        // Main title with gradient
+                        Text("CREATING CARD")
+                            .font(.system(size: 32, weight: .black))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white,
+                                        Color.white.opacity(0.95)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .shadow(color: Color.white.opacity(0.5), radius: 0, x: 0, y: 0)
+                            .shadow(color: Color.white.opacity(0.3), radius: 4, x: 0, y: 0)
+                            .shadow(color: theme.primary.opacity(0.4), radius: 10, x: 0, y: 2)
+                            .tracking(3)
+
+                        // Current phase
+                        VStack(spacing: theme.spacing.xs) {
+                            Text(viewModel.currentPhase)
+                                .font(.system(size: 14, weight: .heavy))
+                                .foregroundColor(theme.primary)
+                                .tracking(2)
+                                .animation(.easeInOut(duration: 0.4), value: viewModel.currentPhase)
+
+                            Text(viewModel.phaseDetail)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(theme.textSecondary.opacity(0.6))
+                                .animation(.easeInOut(duration: 0.4), value: viewModel.phaseDetail)
+                        }
+                    }
+
+                    // Animated cards indicator
+                    CardGenerationDotsIndicator(theme: theme)
+                        .padding(.top, theme.spacing.sm)
+                }
+
+                Spacer()
+
+                // Percentage display at bottom
+                if showPercentage {
+                    Text("\(viewModel.percentageValue)%")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(theme.textSecondary.opacity(0.4))
+                        .animation(.easeIn(duration: 0.3), value: viewModel.percentageValue)
+                }
+
+                Spacer().frame(height: 40)
+            }
+        }
+        // Cancel button overlay
+        .overlay(alignment: .topTrailing) {
+            Button(action: { showCancelConfirm = true }) {
+                Text("Cancel")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.red.opacity(0.95)))
+            }
+            .padding(.top, 16)
+            .padding(.trailing, 20)
+        }
+        .onAppear {
+            startAnimations()
+        }
+        .onDisappear {
+            stopHaptics()
+        }
+        .confirmationDialog(
+            "Cancel card generation?",
+            isPresented: $showCancelConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Stop Generation", role: .destructive) {
+                onCancel()
+            }
+            Button("Keep Creating", role: .cancel) {}
+        }
+        .trackScreen("hockey_card_processing")
+    }
+
+    private func startAnimations() {
+        // Start pulse animation
+        withAnimation {
+            pulseAnimation = true
+        }
+
+        // Show percentage after initial delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showPercentage = true
+            }
+        }
+
+        // Start haptic feedback
+        impactGenerator.prepare()
+        startHapticPulse()
+    }
+
+    private func startHapticPulse() {
+        // Gentle haptic pulse every 3 seconds during processing
+        hapticTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+            impactGenerator.impactOccurred(intensity: 0.3)
+        }
+    }
+
+    private func stopHaptics() {
+        hapticTimer?.invalidate()
+        hapticTimer = nil
+    }
+}
+
+// MARK: - Animated Dots Component (Card themed)
+struct CardGenerationDotsIndicator: View {
+    let theme: any AppTheme
+    @State private var activeIndex = 0
+    @State private var dotScale: [CGFloat] = [1.0, 1.0, 1.0, 1.0, 1.0]
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(0..<5) { index in
+                ZStack {
+                    // Glow effect for active dot
+                    if activeIndex == index {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(theme.primary)
+                            .frame(width: 12, height: 16)
+                            .blur(radius: 5)
+                            .opacity(0.6)
+                    }
+
+                    // Main card shape (small rectangle)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(activeIndex == index ? theme.primary : theme.divider.opacity(0.3))
+                        .frame(width: 8, height: 12)
+                        .scaleEffect(dotScale[index])
+                        .shadow(color: activeIndex == index ? theme.primary.opacity(0.6) : .clear, radius: 3)
+                }
+                .animation(.easeInOut(duration: 0.3), value: activeIndex)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: dotScale[index])
+            }
+        }
+        .onAppear {
+            animateDots()
+        }
+    }
+
+    private func animateDots() {
+        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+            withAnimation {
+                activeIndex = (activeIndex + 1) % 5
+
+                // Create wave effect
+                for i in 0..<5 {
+                    if i == activeIndex {
+                        dotScale[i] = 1.4
+                    } else {
+                        dotScale[i] = 1.0
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Card Generation View Model
 class CardGenerationViewModel: ObservableObject {
     @Published var isGenerating = false
     @Published var generatedCard: UIImage? = nil
     @Published var dominantColor: Color? = nil
     @Published var error: String? = nil
-    @Published var rotationAngle: Double = 0
-    
+
     // Progress state
     @Published var progress: CGFloat = 0.0
-    @Published var loadingStage: String = "Initializing..."
+    @Published var currentPhase: String = "INITIALIZING"
+    @Published var phaseDetail: String = "Preparing your photo..."
+    @Published var percentageValue: Int = 0
     private var progressTimer: Timer?
+    private var phaseIndex: Int = 0
 
     private let playerInfo: PlayerCardInfo
     private let jerseySelection: JerseySelection
     private let imageGenerationService: ImageGenerationService?
-    private var hasStartedGeneration = false  // Guard to prevent duplicate calls
+    private var hasStartedGeneration = false
+
+    // Processing phases with realistic timing for ~60 second generation
+    private let phases: [(title: String, detail: String, duration: Double, progress: Double)] = [
+        ("INITIALIZING", "Preparing your photo...", 3.0, 0.05),
+        ("UPLOADING", "Sending to AI...", 4.0, 0.12),
+        ("ANALYZING FACE", "Detecting facial features...", 8.0, 0.25),
+        ("PRESERVING IDENTITY", "Locking in your likeness...", 10.0, 0.40),
+        ("CREATING JERSEY", "Designing your uniform...", 10.0, 0.55),
+        ("COMPOSITING CARD", "Building the card layout...", 12.0, 0.75),
+        ("ADDING DETAILS", "Player name and number...", 8.0, 0.88),
+        ("FINALIZING", "Almost ready...", 5.0, 0.95)
+    ]
 
     init(playerInfo: PlayerCardInfo, jerseySelection: JerseySelection) {
         self.playerInfo = playerInfo
         self.jerseySelection = jerseySelection
         self.imageGenerationService = ImageGenerationService()
-
-        // Start rotation animation
-        DispatchQueue.main.async {
-            withAnimation {
-                self.rotationAngle = 360
-            }
-        }
     }
 
     func generateCard() {
@@ -408,7 +587,7 @@ class CardGenerationViewModel: ObservableObject {
         isGenerating = true
         error = nil
         generatedCard = nil
-        startProgressSimulation()
+        startProgressAnimation()
 
         service.generateHockeyCard(
             playerInfo: playerInfo,
@@ -416,42 +595,41 @@ class CardGenerationViewModel: ObservableObject {
         ) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isGenerating = false
+                self?.stopProgress()
 
                 switch result {
                 case .success(let image):
                     self?.completeProgress()
-                    
+
                     // Delay slightly to show 100%
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self?.generatedCard = image
-                        
-                        // Increment generation count (handles both free and daily limits)
+
+                        // Increment generation count
                         MonetizationManager.shared.incrementHockeyCardGenerationCount()
-                        
+
                         // Calculate dominant color
                         if let averageColor = image.averageColor {
                             self?.dominantColor = Color(averageColor)
                         }
                         HapticManager.shared.playNotification(type: .success)
-                        
+
                         // Save to documents for Home Screen display
                         if let data = image.pngData(),
                            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                             let fileURL = documents.appendingPathComponent("latest_generated_card.png")
                             try? data.write(to: fileURL)
                             UserDefaults.standard.set(fileURL.path, forKey: "latestGeneratedCardPath")
-                            // Post notification to update Home View
                             NotificationCenter.default.post(name: NSNotification.Name("LatestCardUpdated"), object: nil)
                         }
-                        
-                        // Persist in local history (fire-and-forget)
+
+                        // Persist in local history
                         GeneratedCardsStore.shared.save(image: image)
                     }
 
                 case .failure(let error):
-                    self?.stopProgress()
                     self?.error = error.localizedDescription
-                    self?.hasStartedGeneration = false  // Reset flag on error so user can retry
+                    self?.hasStartedGeneration = false
                     HapticManager.shared.playNotification(type: .error)
                 }
             }
@@ -460,65 +638,95 @@ class CardGenerationViewModel: ObservableObject {
 
     func saveCard() {
         guard let card = generatedCard else { return }
-
         UIImageWriteToSavedPhotosAlbum(card, nil, nil, nil)
         HapticManager.shared.playNotification(type: .success)
     }
 
     func shareCard() {
         guard let card = generatedCard else { return }
-
-        let activityVC = UIActivityViewController(
-            activityItems: [card],
-            applicationActivities: nil
-        )
-
+        let activityVC = UIActivityViewController(activityItems: [card], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
     }
-    
-    // MARK: - Progress Simulation
-    
-    private func startProgressSimulation() {
+
+    // MARK: - Progress Animation
+
+    private func startProgressAnimation() {
         progress = 0.0
-        loadingStage = "Initializing..."
-        progressTimer?.invalidate()
-        
-        let totalDuration: TimeInterval = 12.0 // Expected generation time
-        let updateInterval: TimeInterval = 0.1
-        
-        progressTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] timer in
-            guard let self = self else { return }
-            
-            // Non-linear progress curve
-            if self.progress < 0.3 {
-                self.progress += 0.02 // Fast start
-                self.loadingStage = "Analyzing photos..."
-            } else if self.progress < 0.6 {
-                self.progress += 0.005 // Slow middle
-                self.loadingStage = "Generating artwork..."
-            } else if self.progress < 0.9 {
-                self.progress += 0.002 // Very slow end
-                self.loadingStage = "Refining details..."
-            } else {
-                // Cap at 90% until complete
-                self.progress = 0.9
-                self.loadingStage = "Finalizing..."
+        percentageValue = 0
+        phaseIndex = 0
+
+        // Start phase animation
+        animatePhases()
+
+        // Start percentage animation
+        animatePercentage()
+    }
+
+    private func animatePhases() {
+        var accumulatedTime: Double = 0
+
+        for (index, phase) in phases.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + accumulatedTime) { [weak self] in
+                guard let self = self, self.isGenerating else { return }
+
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    self.currentPhase = phase.title
+                    self.phaseDetail = phase.detail
+                    self.phaseIndex = index
+                }
+
+                // Animate progress to this phase's target
+                withAnimation(.linear(duration: phase.duration)) {
+                    self.progress = phase.progress
+                }
+            }
+            accumulatedTime += phase.duration
+        }
+    }
+
+    private func animatePercentage() {
+        // Total duration is ~60 seconds
+        let totalDuration: Double = 60
+        let steps = 95 // Cap at 95% until complete
+        let stepDuration = totalDuration / Double(steps)
+
+        for step in 0...steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (stepDuration * Double(step))) { [weak self] in
+                guard let self = self, self.isGenerating else { return }
+
+                withAnimation(.linear(duration: 0.1)) {
+                    // Non-linear progression - slower at start and end
+                    let normalizedProgress = Double(step) / Double(steps)
+                    let easedProgress = self.easeInOutProgress(normalizedProgress)
+                    self.percentageValue = Int(easedProgress * 95) // Cap at 95
+                }
             }
         }
     }
-    
+
+    private func easeInOutProgress(_ t: Double) -> Double {
+        // Custom easing function for more realistic progress
+        if t < 0.5 {
+            return 2 * t * t
+        } else {
+            return -1 + (4 - 2 * t) * t
+        }
+    }
+
     private func completeProgress() {
         progressTimer?.invalidate()
         progressTimer = nil
-        withAnimation {
+        withAnimation(.easeOut(duration: 0.3)) {
             progress = 1.0
-            loadingStage = "Complete!"
+            percentageValue = 100
+            currentPhase = "COMPLETE"
+            phaseDetail = "Your card is ready!"
         }
     }
-    
+
     private func stopProgress() {
         progressTimer?.invalidate()
         progressTimer = nil

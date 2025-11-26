@@ -117,6 +117,7 @@ final class AppSecrets {
             "OpenAIAPIKey",
             "GeminiAPIKey",
             "GEMINI_API_KEY",
+            "FalAPIKey",
             "MixpanelTokenDev",
             "MixpanelTokenProd",
             "RevenueCatAPIKey",
@@ -154,6 +155,11 @@ final class AppSecrets {
     var geminiAPIKey: String? {
         // Try multiple key names for flexibility
         loadSecureKey("GeminiAPIKey") ?? loadSecureKey("GEMINI_API_KEY")
+    }
+
+    /// fal.ai API Key
+    var falAPIKey: String? {
+        loadSecureKey("FalAPIKey")
     }
     
     /// Mixpanel Token (Development)
@@ -276,6 +282,7 @@ extension AppSecrets {
             "OpenAIAPIKey",
             "GeminiAPIKey",
             "GEMINI_API_KEY",
+            "FalAPIKey",
             "MixpanelTokenDev",
             "MixpanelTokenProd",
             "RevenueCatAPIKey",

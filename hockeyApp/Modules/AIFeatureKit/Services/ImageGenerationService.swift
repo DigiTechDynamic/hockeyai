@@ -1,23 +1,43 @@
 import Foundation
 import UIKit
 
+// MARK: - Image Generation Provider
+/// Enum to select which backend to use for image generation
+enum ImageGenerationProvider: String, CaseIterable {
+    case geminiDirect = "gemini_direct"  // Google's Gemini API directly
+    case falAI = "fal_ai"                // fal.ai (same Gemini model, no daily limits)
+
+    var displayName: String {
+        switch self {
+        case .geminiDirect: return "Gemini Direct"
+        case .falAI: return "fal.ai"
+        }
+    }
+}
+
 // MARK: - Image Generation Service
-/// Service for generating images using Google's Gemini 3 Pro Image API
-/// Uses gemini-3-pro-image-preview model (aka "Nano Banana Pro") for professional-quality image generation
-/// Features: 4K resolution, advanced text rendering, Google Search grounding
+/// Service for generating images using either Google's Gemini API directly or via fal.ai
+/// Both use the same gemini-3-pro-image-preview model (aka "Nano Banana Pro")
+/// fal.ai advantage: No daily rate limits (250/day on Gemini direct), just concurrency limits
 final class ImageGenerationService {
 
     // MARK: - Configuration
     struct Configuration {
-        let baseURL: String
-        let apiKey: String
+        let provider: ImageGenerationProvider
+        let geminiBaseURL: String
+        let geminiAPIKey: String?
+        let falAPIKey: String?
         let modelName: String
 
-        init(baseURL: String = "https://generativelanguage.googleapis.com/v1beta",
-             apiKey: String,
+        init(provider: ImageGenerationProvider = .falAI,
+             geminiBaseURL: String = "https://generativelanguage.googleapis.com/v1beta",
+             geminiAPIKey: String? = nil,
+             falAPIKey: String? = nil,
              modelName: String = "gemini-3-pro-image-preview") {
-            self.baseURL = baseURL
-            self.apiKey = apiKey
+            self.provider = provider
+            self.geminiBaseURL = geminiBaseURL
+            self.geminiAPIKey = geminiAPIKey
+            self.falAPIKey = falAPIKey
             self.modelName = modelName
         }
     }
@@ -58,6 +78,7 @@ final class ImageGenerationService {
         case missingAPIKey
         case imageDecodingFailed
         case noImagesGenerated
+        case imageUploadFailed
 
         var errorDescription: String? {
             switch self {
@@ -76,11 +97,13 @@ final class ImageGenerationService {
                     return "Image generation failed: \(message)"
                 }
             case .missingAPIKey:
-                return "Gemini API key is missing"
+                return "API key is missing"
             case .imageDecodingFailed:
                 return "Failed to decode generated image"
             case .noImagesGenerated:
                 return "No images were generated"
+            case .imageUploadFailed:
+                return "Failed to upload reference image"
             }
         }
     }
@@ -90,6 +113,13 @@ final class ImageGenerationService {
         static let defaultRequestTimeout: TimeInterval = 120.0  // 2 minutes for image generation
         static let maxRetries = 1
         static let retryDelay: TimeInterval = 2.0
+
+        // fal.ai endpoints
+        static let falBaseURL = "https://fal.run"
+        static let falGeminiModel = "fal-ai/gemini-3-pro-image-preview/edit"
+
+        // fal.ai file upload endpoint
+        static let falUploadURL = "https://fal.run/fal-ai/any/upload"
     }
 
     // MARK: - Properties
@@ -97,6 +127,11 @@ final class ImageGenerationService {
     private let session: URLSession
     private let jsonEncoder = JSONEncoder()
     private let jsonDecoder = JSONDecoder()
+
+    /// Current provider being used
+    var currentProvider: ImageGenerationProvider {
+        configuration.provider
+    }
 
     // MARK: - Initialization
     init(configuration: Configuration) {
@@ -114,15 +149,57 @@ final class ImageGenerationService {
         self.session = URLSession(configuration: sessionConfig)
     }
 
-    /// Convenience initializer that loads API key from AppSecrets
+    /// Convenience initializer that loads API keys from AppSecrets
+    /// Defaults to fal.ai provider if available, falls back to Gemini direct
     convenience init?() {
-        guard let apiKey = AppSecrets.shared.geminiAPIKey else {
-            print("❌ [ImageGenerationService] No Gemini API key found")
+        let falKey = AppSecrets.shared.falAPIKey
+        let geminiKey = AppSecrets.shared.geminiAPIKey
+
+        // Determine provider based on available keys
+        // Prefer fal.ai since it has no daily limits
+        let provider: ImageGenerationProvider
+        if falKey != nil {
+            provider = .falAI
+            print("✅ [ImageGenerationService] Using fal.ai provider (no daily limits)")
+        } else if geminiKey != nil {
+            provider = .geminiDirect
+            print("⚠️ [ImageGenerationService] Using Gemini direct (250/day limit)")
+        } else {
+            print("❌ [ImageGenerationService] No API keys found")
             return nil
         }
 
-        self.init(configuration: Configuration(apiKey: apiKey))
-        print("✅ [ImageGenerationService] Initialized with API key")
+        self.init(configuration: Configuration(
+            provider: provider,
+            geminiAPIKey: geminiKey,
+            falAPIKey: falKey
+        ))
+    }
+
+    /// Initialize with a specific provider
+    convenience init?(provider: ImageGenerationProvider) {
+        let falKey = AppSecrets.shared.falAPIKey
+        let geminiKey = AppSecrets.shared.geminiAPIKey
+
+        switch provider {
+        case .falAI:
+            guard falKey != nil else {
+                print("❌ [ImageGenerationService] fal.ai API key not found")
+                return nil
+            }
+        case .geminiDirect:
+            guard geminiKey != nil else {
+                print("❌ [ImageGenerationService] Gemini API key not found")
+                return nil
+            }
+        }
+
+        self.init(configuration: Configuration(
+            provider: provider,
+            geminiAPIKey: geminiKey,
+            falAPIKey: falKey
+        ))
+        print("✅ [ImageGenerationService] Initialized with \(provider.displayName)")
     }
 
     // MARK: - Image Generation
@@ -136,6 +213,180 @@ final class ImageGenerationService {
     func generateImage(
         prompt: String,
         parameters: GenerationParameters = GenerationParameters(),
+        referenceImages: [UIImage] = [],
+        completion: @escaping (Result<UIImage, Error>) -> Void
+    ) {
+        switch configuration.provider {
+        case .geminiDirect:
+            generateImageWithGeminiDirect(
+                prompt: prompt,
+                parameters: parameters,
+                referenceImages: referenceImages,
+                completion: completion
+            )
+        case .falAI:
+            generateImageWithFalAI(
+                prompt: prompt,
+                parameters: parameters,
+                referenceImages: referenceImages,
+                completion: completion
+            )
+        }
+    }
+
+    // MARK: - fal.ai Implementation
+
+    private func generateImageWithFalAI(
+        prompt: String,
+        parameters: GenerationParameters,
+        referenceImages: [UIImage],
+        completion: @escaping (Result<UIImage, Error>) -> Void
+    ) {
+        print("🎨 [ImageGenerationService] Starting fal.ai image generation...")
+        print("📝 [ImageGenerationService] Prompt length: \(prompt.count) chars")
+        print("🔧 [ImageGenerationService] Parameters: Aspect Ratio \(parameters.aspectRatio.rawValue), Size: \(parameters.imageSize.rawValue)")
+        if !referenceImages.isEmpty {
+            print("🖼️ [ImageGenerationService] Reference images: \(referenceImages.count)")
+        }
+
+        // fal.ai requires images as URLs or base64 data URIs
+        // We'll use base64 data URIs for simplicity
+        var imageDataURIs: [String] = []
+
+        for (index, image) in referenceImages.enumerated() {
+            // Resize to max 1024px to reduce payload size
+            let resizedImage = resizeImage(image, maxDimension: 1024)
+
+            if let imageData = resizedImage.jpegData(compressionQuality: 0.8) {
+                let base64String = imageData.base64EncodedString()
+                let dataURI = "data:image/jpeg;base64,\(base64String)"
+                imageDataURIs.append(dataURI)
+                print("🖼️ [ImageGenerationService] Encoded image \(index + 1): \(imageData.count / 1024) KB")
+            }
+        }
+
+        // Build fal.ai request
+        guard let falAPIKey = configuration.falAPIKey else {
+            completion(.failure(ServiceError.missingAPIKey))
+            return
+        }
+
+        guard let url = URL(string: "\(Constants.falBaseURL)/\(Constants.falGeminiModel)") else {
+            completion(.failure(ServiceError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Key \(falAPIKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = Constants.defaultRequestTimeout
+
+        // Build request body for fal.ai
+        var requestBody: [String: Any] = [
+            "prompt": prompt,
+            "num_images": 1,
+            "aspect_ratio": parameters.aspectRatio.rawValue,
+            "resolution": parameters.imageSize.rawValue,
+            "output_format": "png",
+            "sync_mode": true  // Return image data directly
+        ]
+
+        if !imageDataURIs.isEmpty {
+            requestBody["image_urls"] = imageDataURIs
+        }
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(ServiceError.decodingError(error)))
+            return
+        }
+
+        let requestStartTime = Date()
+
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            let requestDuration = Date().timeIntervalSince(requestStartTime)
+            print("📊 [ImageGenerationService] fal.ai request completed in \(String(format: "%.2f", requestDuration))s")
+
+            if let error = error {
+                print("❌ [ImageGenerationService] Network error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(ServiceError.invalidResponse))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(ServiceError.noData))
+                return
+            }
+
+            // Log response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📄 [ImageGenerationService] Response preview: \(String(responseString.prefix(500)))")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorJson["detail"] as? String {
+                    print("❌ [ImageGenerationService] fal.ai API error: \(detail)")
+                    completion(.failure(ServiceError.apiError(detail)))
+                } else {
+                    completion(.failure(ServiceError.apiError("HTTP \(httpResponse.statusCode)")))
+                }
+                return
+            }
+
+            // Parse fal.ai response
+            do {
+                let image = try self.parseFalAIResponse(data: data)
+                print("✅ [ImageGenerationService] fal.ai image generation complete")
+                completion(.success(image))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+
+        task.resume()
+    }
+
+    private func parseFalAIResponse(data: Data) throws -> UIImage {
+        // fal.ai response format:
+        // { "images": [{ "url": "...", "content_type": "image/png", ... }] }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let images = json["images"] as? [[String: Any]],
+              let firstImage = images.first else {
+            print("❌ [ImageGenerationService] Failed to parse fal.ai response")
+            throw ServiceError.noImagesGenerated
+        }
+
+        // Check if we have a URL or base64 data
+        if let imageURL = firstImage["url"] as? String {
+            // Download the image from URL
+            print("📥 [ImageGenerationService] Downloading image from URL...")
+            guard let url = URL(string: imageURL),
+                  let imageData = try? Data(contentsOf: url),
+                  let image = UIImage(data: imageData) else {
+                throw ServiceError.imageDecodingFailed
+            }
+            print("✅ [ImageGenerationService] Downloaded image (\(imageData.count / 1024) KB)")
+            return image
+        }
+
+        throw ServiceError.noImagesGenerated
+    }
+
+    // MARK: - Gemini Direct Implementation
+
+    private func generateImageWithGeminiDirect(
+        prompt: String,
+        parameters: GenerationParameters,
         referenceImages: [UIImage] = [],
         completion: @escaping (Result<UIImage, Error>) -> Void
     ) {
@@ -157,7 +408,7 @@ final class ImageGenerationService {
         maxRetries: Int,
         completion: @escaping (Result<UIImage, Error>) -> Void
     ) {
-        print("🎨 [ImageGenerationService] Starting image generation...")
+        print("🎨 [ImageGenerationService] Starting Gemini direct image generation...")
         print("📝 [ImageGenerationService] Prompt: \(prompt)")
         print("🔧 [ImageGenerationService] Parameters: Aspect Ratio \(parameters.aspectRatio.rawValue), Size: \(parameters.imageSize.rawValue)")
         if !referenceImages.isEmpty {
@@ -168,7 +419,7 @@ final class ImageGenerationService {
 
         // Build request
         do {
-            let request = try buildGenerationRequest(
+            let request = try buildGeminiRequest(
                 prompt: prompt,
                 parameters: parameters,
                 referenceImages: referenceImages
@@ -230,7 +481,7 @@ final class ImageGenerationService {
 
                 // Parse response and extract image
                 do {
-                    let image = try self.parseGenerationResponse(data: data)
+                    let image = try self.parseGeminiResponse(data: data)
                     print("✅ [ImageGenerationService] Image generation complete")
                     completion(.success(image))
                 } catch {
@@ -245,21 +496,25 @@ final class ImageGenerationService {
         }
     }
 
-    // MARK: - Request Building
+    // MARK: - Request Building (Gemini Direct)
 
-    private func buildGenerationRequest(
+    private func buildGeminiRequest(
         prompt: String,
         parameters: GenerationParameters,
         referenceImages: [UIImage] = []
     ) throws -> URLRequest {
+        guard let apiKey = configuration.geminiAPIKey else {
+            throw ServiceError.missingAPIKey
+        }
+
         // Build URL for Gemini 3 Pro Image
-        guard let url = URL(string: "\(configuration.baseURL)/models/\(configuration.modelName):generateContent") else {
+        guard let url = URL(string: "\(configuration.geminiBaseURL)/models/\(configuration.modelName):generateContent") else {
             throw ServiceError.invalidURL
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(configuration.apiKey, forHTTPHeaderField: "x-goog-api-key")
+        request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         // CRITICAL FIX: Disable HTTP/3 to prevent QUIC protocol failures on cellular networks
@@ -279,12 +534,11 @@ final class ImageGenerationService {
             ["text": prompt]
         ]
 
-        // Add reference images as inline_data with highest quality compression
         // Add reference images as inline_data with optimized compression for cellular
         for image in referenceImages {
             // Resize to max 1024px to reduce payload size (critical for cellular)
             let resizedImage = resizeImage(image, maxDimension: 1024)
-            
+
             // Use 0.8 compression to balance quality and size
             if let imageData = resizedImage.jpegData(compressionQuality: 0.8) {
                 let base64String = imageData.base64EncodedString()
@@ -318,9 +572,9 @@ final class ImageGenerationService {
         return request
     }
 
-    // MARK: - Response Parsing
+    // MARK: - Response Parsing (Gemini Direct)
 
-    private func parseGenerationResponse(data: Data) throws -> UIImage {
+    private func parseGeminiResponse(data: Data) throws -> UIImage {
         // Parse Gemini response format
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw ServiceError.decodingError(NSError(domain: "ImageGenerationService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON response"]))
@@ -395,7 +649,7 @@ final class ImageGenerationService {
     }
 
     // MARK: - Helper Methods
-    
+
     private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
         let size = image.size
 
@@ -535,7 +789,7 @@ extension ImageGenerationService {
 
         // Enhanced positive keywords for realism
         prompt += """
-        
+
         QUALITY & STYLE:
         - 8k resolution, photorealistic, hyper-detailed
         - Sharp focus, professional sports photography
@@ -543,7 +797,7 @@ extension ImageGenerationService {
         - Highly detailed textures (jersey fabric, ice surface, skin pores)
         - Color graded, vibrant, high contrast
         - Masterpiece, award-winning photography
-        
+
         """
 
         // Add jersey-specific details (jersey image comes AFTER all player photos)
@@ -629,7 +883,7 @@ extension ImageGenerationService {
         """
 
         prompt += """
-        
+
         CRITICAL REQUIREMENTS:
         - The card should fill the ENTIRE image frame with NO background
         - NO wooden table, NO surface, NO shadows around the card
@@ -659,5 +913,32 @@ extension ImageGenerationService {
         """
 
         return prompt
+    }
+}
+
+// MARK: - Provider Configuration Helper
+extension ImageGenerationService {
+    /// Check which providers are available based on configured API keys
+    static var availableProviders: [ImageGenerationProvider] {
+        var providers: [ImageGenerationProvider] = []
+
+        if AppSecrets.shared.falAPIKey != nil {
+            providers.append(.falAI)
+        }
+        if AppSecrets.shared.geminiAPIKey != nil {
+            providers.append(.geminiDirect)
+        }
+
+        return providers
+    }
+
+    /// Get the recommended provider (prefers fal.ai for no daily limits)
+    static var recommendedProvider: ImageGenerationProvider? {
+        if AppSecrets.shared.falAPIKey != nil {
+            return .falAI
+        } else if AppSecrets.shared.geminiAPIKey != nil {
+            return .geminiDirect
+        }
+        return nil
     }
 }
