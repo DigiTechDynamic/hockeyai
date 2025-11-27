@@ -35,16 +35,15 @@ struct CardGenerationView: View {
                 if viewModel.isGenerating {
                     // Full-screen processing view (matches other AI features)
                     CardGenerationProcessingView(viewModel: viewModel, onCancel: onDismiss)
-                } else if let error = viewModel.error {
-                    // Header for error state
-                    header
-                    ScrollView {
-                        errorView(error: error)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                        Spacer(minLength: 80)
-                    }
-                    .scrollIndicators(.hidden)
+                } else if viewModel.error != nil {
+                    // Full-screen error view using reusable component
+                    AIServiceErrorView(
+                        errorType: viewModel.errorType ?? .processingFailed,
+                        onRetry: {
+                            viewModel.generateCard()
+                        },
+                        onDismiss: onDismiss
+                    )
                 } else if let generatedCard = viewModel.generatedCard {
                     // Header for result state
                     header
@@ -61,8 +60,8 @@ struct CardGenerationView: View {
                 }
             }
 
-            // Bottom actions (only when not generating)
-            if !viewModel.isGenerating {
+            // Bottom actions (only when showing generated card)
+            if !viewModel.isGenerating && viewModel.error == nil && viewModel.generatedCard != nil {
                 VStack {
                     Spacer()
                     bottomActions
@@ -113,55 +112,6 @@ struct CardGenerationView: View {
         )
     }
 
-    // MARK: - Error View
-    private func errorView(error: String) -> some View {
-        VStack(spacing: 32) {
-            // Error icon
-            ZStack {
-                Circle()
-                    .fill(Color.red.opacity(0.1))
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(.red)
-            }
-            .padding(.top, 60)
-
-            VStack(spacing: 16) {
-                Text("Generation Failed")
-                    .font(theme.fonts.title)
-                    .foregroundColor(.white)
-
-                Text(error)
-                    .font(theme.fonts.body)
-                    .foregroundColor(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-            .padding(.horizontal, 20)
-
-            // Retry button
-            Button(action: {
-                viewModel.generateCard()
-            }) {
-                HStack {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 16, weight: .bold))
-                    Text("Try Again")
-                        .font(theme.fonts.button)
-                        .fontWeight(.bold)
-                }
-                .foregroundColor(.white)
-                .frame(height: 56)
-                .padding(.horizontal, 32)
-                .background(theme.primary)
-                .cornerRadius(28)
-                .shadow(color: theme.primary.opacity(0.4), radius: 10, x: 0, y: 5)
-            }
-        }
-    }
-
     // MARK: - Generated Card View
     private func generatedCardView(image: UIImage) -> some View {
         VStack(spacing: 32) {
@@ -197,69 +147,86 @@ struct CardGenerationView: View {
 
     // MARK: - Bottom Actions
     private var bottomActions: some View {
-        VStack(spacing: 16) {
-            if let _ = viewModel.generatedCard {
+        VStack(spacing: 12) {
+            // Primary action row - Save & Share
+            HStack(spacing: 12) {
                 // Save to Photos button
                 Button(action: {
                     viewModel.saveCard()
                 }) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("Save to Photos")
-                            .font(theme.fonts.button)
-                            .fontWeight(.bold)
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Save")
+                            .font(.system(size: 15, weight: .bold))
                     }
-                    .foregroundColor(theme.primary)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
+                    .frame(height: 50)
                     .background(theme.surface.opacity(0.5))
-                    .cornerRadius(28)
+                    .cornerRadius(25)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 28)
+                        RoundedRectangle(cornerRadius: 25)
                             .stroke(theme.primary.opacity(0.5), lineWidth: 1)
                     )
                 }
 
-                // Upsell for free users
-                if !MonetizationManager.shared.isPremium {
-                    Button(action: {
-                        HapticManager.shared.playSelection()
-                        showingPaywall = true
-                    }) {
-                        HStack {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.yellow)
-                            Text("Unlock Unlimited Cards")
-                                .font(theme.fonts.button)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            RoundedRectangle(cornerRadius: 28)
-                                .fill(theme.surface.opacity(0.3))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 28)
-                                .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
-                        )
+                // Share button
+                Button(action: {
+                    viewModel.shareCard()
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Share")
+                            .font(.system(size: 15, weight: .bold))
                     }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(theme.surface.opacity(0.5))
+                    .cornerRadius(25)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 25)
+                            .stroke(theme.primary.opacity(0.5), lineWidth: 1)
+                    )
                 }
+            }
 
-            } else {
-                // Close button for error state
-                Button(action: onDismiss) {
-                    Text("Close")
-                        .font(theme.fonts.button)
-                        .fontWeight(.bold)
-                        .foregroundColor(theme.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(theme.surface.opacity(0.3))
-                        .cornerRadius(28)
+            // Create Another Card - BIG CTA
+            Button(action: {
+                HapticManager.shared.playSelection()
+                onDismiss()
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18, weight: .bold))
+                    Text("Create Another Card")
+                        .font(.system(size: 17, weight: .bold))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(theme.primary)
+                .cornerRadius(28)
+                .shadow(color: theme.primary.opacity(0.4), radius: 10, x: 0, y: 5)
+            }
+
+            // Upsell for free users - subtle
+            if !MonetizationManager.shared.isPremium {
+                Button(action: {
+                    HapticManager.shared.playSelection()
+                    showingPaywall = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.yellow)
+                        Text("Unlock Unlimited Cards")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(theme.textSecondary)
+                    }
+                    .padding(.vertical, 8)
                 }
             }
         }
@@ -400,6 +367,12 @@ struct CardGenerationProcessingView: View {
                                 .foregroundColor(theme.textSecondary.opacity(0.6))
                                 .animation(.easeInOut(duration: 0.4), value: viewModel.phaseDetail)
                         }
+
+                        // Time expectation
+                        Text("This usually takes 1-2 minutes")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(theme.textSecondary.opacity(0.4))
+                            .padding(.top, theme.spacing.sm)
                     }
 
                     // Animated cards indicator
@@ -449,7 +422,6 @@ struct CardGenerationProcessingView: View {
             }
             Button("Keep Creating", role: .cancel) {}
         }
-        .trackScreen("hockey_card_processing")
     }
 
     private func startAnimations() {
@@ -542,6 +514,7 @@ class CardGenerationViewModel: ObservableObject {
     @Published var generatedCard: UIImage? = nil
     @Published var dominantColor: Color? = nil
     @Published var error: String? = nil
+    @Published var errorType: AIServiceErrorType? = nil
 
     // Progress state
     @Published var progress: CGFloat = 0.0
@@ -555,17 +528,16 @@ class CardGenerationViewModel: ObservableObject {
     private let jerseySelection: JerseySelection
     private let imageGenerationService: ImageGenerationService?
     private var hasStartedGeneration = false
+    private var generationStartTime: Date?
 
-    // Processing phases with realistic timing for ~60 second generation
+    // Processing phases with realistic timing for ~100-120 second generation
     private let phases: [(title: String, detail: String, duration: Double, progress: Double)] = [
-        ("INITIALIZING", "Preparing your photo...", 3.0, 0.05),
-        ("UPLOADING", "Sending to AI...", 4.0, 0.12),
-        ("ANALYZING FACE", "Detecting facial features...", 8.0, 0.25),
-        ("PRESERVING IDENTITY", "Locking in your likeness...", 10.0, 0.40),
-        ("CREATING JERSEY", "Designing your uniform...", 10.0, 0.55),
-        ("COMPOSITING CARD", "Building the card layout...", 12.0, 0.75),
-        ("ADDING DETAILS", "Player name and number...", 8.0, 0.88),
-        ("FINALIZING", "Almost ready...", 5.0, 0.95)
+        ("PREPARING", "Preparing your photo...", 5.0, 0.05),
+        ("UPLOADING", "Sending to AI...", 5.0, 0.10),
+        ("GENERATING CARD", "AI is creating your card...", 40.0, 0.45),
+        ("STILL GENERATING", "This takes a moment...", 30.0, 0.70),
+        ("ADDING DETAILS", "Refining your card...", 20.0, 0.85),
+        ("FINALIZING", "Almost there...", 15.0, 0.95)
     ]
 
     init(playerInfo: PlayerCardInfo, jerseySelection: JerseySelection) {
@@ -586,8 +558,13 @@ class CardGenerationViewModel: ObservableObject {
 
         isGenerating = true
         error = nil
+        errorType = nil
         generatedCard = nil
+        generationStartTime = Date()
         startProgressAnimation()
+
+        // Track generation started (Step 5)
+        HockeyCardAnalytics.trackGenerationStarted()
 
         service.generateHockeyCard(
             playerInfo: playerInfo,
@@ -601,9 +578,15 @@ class CardGenerationViewModel: ObservableObject {
                 case .success(let image):
                     self?.completeProgress()
 
+                    // Calculate generation time
+                    let generationTime = self?.generationStartTime.map { Date().timeIntervalSince($0) } ?? 0
+
                     // Delay slightly to show 100%
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self?.generatedCard = image
+
+                        // Track completion (Step 4)
+                        HockeyCardAnalytics.trackCompleted(generationTime: generationTime)
 
                         // Increment generation count
                         MonetizationManager.shared.incrementHockeyCardGenerationCount()
@@ -629,6 +612,7 @@ class CardGenerationViewModel: ObservableObject {
 
                 case .failure(let error):
                     self?.error = error.localizedDescription
+                    self?.errorType = AIServiceErrorType.from(error)
                     self?.hasStartedGeneration = false
                     HapticManager.shared.playNotification(type: .error)
                 }

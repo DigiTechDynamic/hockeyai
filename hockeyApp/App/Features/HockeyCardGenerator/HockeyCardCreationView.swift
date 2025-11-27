@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 // MARK: - Unified Hockey Card Creation View
-/// Single scrollable screen for creating hockey cards - combines player info and jersey selection
+/// Streamlined single-screen hockey card creator optimized for conversion
 struct HockeyCardCreationView: View {
     @Environment(\.theme) var theme
     @StateObject private var viewModel = HockeyCardCreationViewModel()
@@ -40,26 +40,16 @@ struct HockeyCardCreationView: View {
 
                 // Single Scrollable Content
                 ScrollView {
-                    VStack(spacing: 32) {
-                        // SECTION 1: Photo upload
-                        photoUploadSection
-
-                        // Only show remaining sections after photo is uploaded
-                        if !viewModel.playerPhotos.isEmpty {
-                            // Divider
-                            sectionDivider
-
-                            // SECTION 2: Player info
-                            playerInfoSection
-
-                            // Divider
-                            sectionDivider
-
-                            // SECTION 3: Jersey Selection
-                            jerseySelectionSection
+                    VStack(spacing: 24) {
+                        // Show inspiring empty state OR the creation form
+                        if viewModel.playerPhotos.isEmpty {
+                            inspiringEmptyState
+                        } else {
+                            // Photo uploaded - show compact creation flow
+                            compactCreationFlow
                         }
 
-                        Spacer(minLength: 100)
+                        Spacer(minLength: 120)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
@@ -67,11 +57,11 @@ struct HockeyCardCreationView: View {
                 .scrollIndicators(.hidden)
             }
 
-            // Bottom CTA (Floating) - only show when form is complete
-            if viewModel.isFormComplete {
+            // Sticky Bottom CTA - ALWAYS visible when photo is uploaded
+            if !viewModel.playerPhotos.isEmpty {
                 VStack {
                     Spacer()
-                    bottomCTA
+                    stickyBottomCTA
                 }
             }
         }
@@ -94,130 +84,15 @@ struct HockeyCardCreationView: View {
         .fullScreenCover(isPresented: $showingPaywall) {
             PaywallPresenter(source: "hockey_card_limit")
         }
-        .sheet(isPresented: $viewModel.showingPhotoTypePicker) {
-            photoTypePickerSheet
-        }
         .alert("Daily Limit Reached", isPresented: $showingDailyLimitAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text("You've reached your daily limit of 5 cards. Please come back tomorrow!")
         }
-    }
-
-    // MARK: - Photo Type Picker Sheet
-    private var photoTypePickerSheet: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 0) {
-                HStack {
-                    Text("What type of photo is this?")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 20)
-
-                Divider().background(theme.divider)
-            }
-
-            // Photo preview - smaller
-            if let image = viewModel.playerPhotos.first {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(theme.primary.opacity(0.3), lineWidth: 2)
-                    )
-                    .padding(.top, 20)
-                    .padding(.bottom, 8)
-            }
-
-            Text("This helps us create the best card possible")
-                .font(.system(size: 14))
-                .foregroundColor(theme.textSecondary)
-                .padding(.bottom, 16)
-
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(PhotoUploadType.allCases, id: \.self) { type in
-                        photoTypeSelectionCard(type: type)
-                    }
-                }
-                .padding(20)
-            }
-
-            Spacer()
+        .onAppear {
+            // Track funnel start (Step 1)
+            HockeyCardAnalytics.trackStarted(source: "hockey_card_home")
         }
-        .background(theme.background.ignoresSafeArea())
-        .presentationDetents([.large])
-        .interactiveDismissDisabled(viewModel.selectedPhotoType == nil)
-    }
-
-    private func photoTypeSelectionCard(type: PhotoUploadType) -> some View {
-        Button(action: {
-            HapticManager.shared.playSelection()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                viewModel.selectedPhotoType = type
-            }
-            // Delay dismissal slightly for visual feedback
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                viewModel.showingPhotoTypePicker = false
-            }
-        }) {
-            HStack(spacing: 14) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(theme.surface.opacity(0.6))
-                        .frame(width: 48, height: 48)
-
-                    Image(systemName: type.icon)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(theme.primary)
-                }
-
-                // Text content - simplified to just title and short description
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(type.rawValue)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
-
-                    Text(type.description)
-                        .font(.system(size: 13))
-                        .foregroundColor(theme.textSecondary)
-                        .lineLimit(2)
-                }
-
-                Spacer()
-
-                // Radio button selection indicator
-                ZStack {
-                    Circle()
-                        .strokeBorder(theme.primary, lineWidth: 2)
-                        .frame(width: 24, height: 24)
-
-                    if viewModel.selectedPhotoType == type {
-                        Circle()
-                            .fill(theme.primary)
-                            .frame(width: 14, height: 14)
-                    }
-                }
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(theme.surface.opacity(0.3))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(viewModel.selectedPhotoType == type ? theme.primary : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Header
@@ -264,835 +139,669 @@ struct HockeyCardCreationView: View {
         )
     }
 
-    // MARK: - Title Section
-    private var titleSection: some View {
-        VStack(spacing: 12) {
-            // Removed redundant description - educational card below is more useful
-        }
-    }
+    // MARK: - Inspiring Empty State
+    private var inspiringEmptyState: some View {
+        VStack(spacing: 32) {
+            // Hero section with example cards
+            exampleCardsShowcase
+                .padding(.top, 20)
 
-    // MARK: - Photo Upload Section
-    private var photoUploadSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("PHOTOS", systemImage: "camera.fill")
-                .font(theme.fonts.caption)
-                .fontWeight(.bold)
-                .foregroundColor(theme.primary)
-                .tracking(1)
+            // Main CTA
+            VStack(spacing: 16) {
+                Text("Create YOUR Hockey Card")
+                    .font(.system(size: 28, weight: .black))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.white, Color.white.opacity(0.9)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: theme.primary.opacity(0.3), radius: 10)
 
-            Text("Upload any photo - we'll help you create your card.")
-                .font(theme.fonts.caption)
-                .foregroundColor(theme.textSecondary)
-
-            // Show uploaded photo
-            if let image = viewModel.playerPhotos.first {
-                photoThumbnail(image: image, index: 0)
-
-                // Show selected photo type info after categorization
-                if let photoType = viewModel.selectedPhotoType {
-                    photoTypeInfoCard(photoType)
-                }
-            }
-
-            // Upload button (always visible if no photo)
-            if viewModel.playerPhotos.isEmpty {
-                addPhotoButton
-            }
-        }
-    }
-
-    // MARK: - Photo Type Educational Card
-    private var photoTypeEducationalCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Photo Types We Support:")
-                .font(theme.fonts.bodyBold)
-                .foregroundColor(.white)
-
-            ForEach(PhotoUploadType.allCases, id: \.self) { type in
-                photoTypeInfoRow(type: type)
-            }
-
-            HStack(spacing: 8) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(theme.accent)
-
-                Text("Don't worry - you can choose which type after uploading!")
-                    .font(theme.fonts.caption)
+                Text("Upload any photo and our AI will transform you into a pro hockey player card")
+                    .font(.system(size: 15))
                     .foregroundColor(theme.textSecondary)
-                    .italic()
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
             }
-            .padding(.top, 4)
+
+            // Big upload button
+            bigUploadButton
+
+            // Quick stats
+            HStack(spacing: 32) {
+                statBadge(icon: "person.3.fill", text: "10K+ cards")
+                statBadge(icon: "star.fill", text: "32 NHL teams")
+                statBadge(icon: "clock.fill", text: "~60 seconds")
+            }
+            .padding(.top, 8)
         }
-        .padding(16)
-        .background(theme.surface.opacity(0.3))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(theme.primary.opacity(0.2), lineWidth: 1)
-        )
     }
 
-    private func photoTypeInfoRow(type: PhotoUploadType) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+    private var exampleCardsShowcase: some View {
+        ZStack {
+            // Background glow
+            Circle()
+                .fill(theme.primary.opacity(0.15))
+                .frame(width: 280, height: 280)
+                .blur(radius: 40)
+
+            // Stacked example cards (using placeholder since we don't have example images)
             ZStack {
-                Circle()
-                    .fill(theme.primary.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                // Back card (left tilt)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(LinearGradient(
+                        colors: [Color.blue.opacity(0.6), Color.blue.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 140, height: 200)
+                    .overlay(
+                        VStack {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.white.opacity(0.5))
+                            Text("NHL")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .rotationEffect(.degrees(-12))
+                    .offset(x: -50, y: 10)
 
-                Image(systemName: type.icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(theme.primary)
+                // Middle card (right tilt)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(LinearGradient(
+                        colors: [Color.red.opacity(0.6), Color.red.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 140, height: 200)
+                    .overlay(
+                        VStack {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.white.opacity(0.5))
+                            Text("PRO")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .rotationEffect(.degrees(12))
+                    .offset(x: 50, y: 10)
+
+                // Front card (center)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(LinearGradient(
+                        colors: [theme.primary.opacity(0.8), theme.primary.opacity(0.4)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 150, height: 210)
+                    .overlay(
+                        VStack(spacing: 8) {
+                            Image(systemName: "person.crop.rectangle.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.white)
+                            Text("YOUR CARD")
+                                .font(.system(size: 14, weight: .black))
+                                .foregroundColor(.white)
+                                .tracking(1)
+                        }
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(theme.primary, lineWidth: 2)
+                    )
+                    .shadow(color: theme.primary.opacity(0.5), radius: 20)
             }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(type.rawValue)
-                    .font(theme.fonts.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-
-                Text(type.description)
-                    .font(.system(size: 12))
-                    .foregroundColor(theme.textSecondary)
-                    .lineSpacing(2)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(theme.success)
-                    Text(type.pros)
-                        .font(.system(size: 11))
-                        .foregroundColor(theme.textSecondary.opacity(0.8))
-                }
-                .padding(.top, 2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(height: 260)
     }
 
-    private func photoTypeInfoCard(_ type: PhotoUploadType) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "info.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(theme.primary)
-
-                Text("Photo Type: \(type.rawValue)")
-                    .font(theme.fonts.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(theme.primary)
-
-                Spacer()
-
-                Button(action: {
-                    viewModel.showingPhotoTypePicker = true
-                }) {
-                    Text("Change")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(theme.accent)
-                }
-            }
-
-            Text(type.description)
-                .font(theme.fonts.caption)
+    private func statBadge(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(theme.primary)
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(theme.textSecondary)
-                .lineSpacing(2)
         }
-        .padding(12)
-        .background(theme.primary.opacity(0.1))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(theme.primary.opacity(0.3), lineWidth: 1)
-        )
     }
 
-    private var addPhotoButton: some View {
+    private var bigUploadButton: some View {
         Button(action: {
-            viewModel.currentPhotoIndex = 0
             viewModel.showingPhotoOptions = true
         }) {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(theme.primary.opacity(0.1))
-                        .frame(width: 60, height: 60)
-                        .overlay(
-                            Circle()
-                                .stroke(theme.primary.opacity(0.5), lineWidth: 1)
-                        )
-
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(theme.primary)
-                }
-
-                Text("Add Photo")
-                    .font(theme.fonts.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+            HStack(spacing: 12) {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 20, weight: .bold))
+                Text("Choose Photo")
+                    .font(.system(size: 18, weight: .bold))
             }
+            .foregroundColor(.black)
             .frame(maxWidth: .infinity)
-            .frame(height: 220)
-            .background(theme.surface.opacity(0.3))
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(style: StrokeStyle(lineWidth: 2, dash: [6, 6]))
-                    .foregroundColor(theme.primary.opacity(0.3))
-            )
+            .frame(height: 60)
+            .background(theme.primary)
+            .cornerRadius(30)
+            .shadow(color: theme.primary.opacity(0.5), radius: 15, x: 0, y: 8)
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 20)
         .confirmationDialog("Add Your Photo", isPresented: $viewModel.showingPhotoOptions) {
-            Button("📸 Take Photo Now") {
+            Button("Take Photo") {
                 viewModel.photoSourceType = .camera
                 viewModel.showingImagePicker = true
             }
-            Button("🖼️ Choose from Photos") {
+            Button("Choose from Library") {
                 viewModel.photoSourceType = .photoLibrary
                 viewModel.showingImagePicker = true
             }
             Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Upload any photo - we'll help you create your card")
         }
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerMultiple(
                 sourceType: viewModel.photoSourceType,
                 onImagePicked: { image in
-                    viewModel.addPhoto(image)
-                    // Show photo type picker after upload
-                    viewModel.showingPhotoTypePicker = true
+                    let source = viewModel.photoSourceType == .camera ? "camera" : "library"
+                    viewModel.addPhoto(image, source: source)
                 }
             )
         }
     }
 
-    private func photoThumbnail(image: UIImage, index: Int) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(theme.primary.opacity(0.5), lineWidth: 2)
-                )
-                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+    // MARK: - Compact Creation Flow (after photo upload)
+    private var compactCreationFlow: some View {
+        VStack(spacing: 20) {
+            // Photo with inline type selector
+            photoWithTypeSelector
 
-            Button(action: {
-                withAnimation {
-                    viewModel.removePhoto(at: index)
-                }
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 28, height: 28)
-                    .background(Color.red)
-                    .clipShape(Circle())
-                    .shadow(radius: 2)
-            }
-            .offset(x: 8, y: -8)
+            // Compact player info
+            compactPlayerInfo
+
+            // Visual team picker
+            visualTeamPicker
         }
     }
 
-    // MARK: - Player Info Section
-    private var playerInfoSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("INFORMATION", systemImage: "person.text.rectangle.fill")
-                .font(theme.fonts.caption)
-                .fontWeight(.bold)
-                .foregroundColor(theme.primary)
-                .tracking(1)
+    // MARK: - Photo with Inline Type Selector
+    private var photoWithTypeSelector: some View {
+        VStack(spacing: 12) {
+            // Photo thumbnail with remove button
+            ZStack(alignment: .topTrailing) {
+                if let image = viewModel.playerPhotos.first {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 180)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(theme.primary.opacity(0.5), lineWidth: 2)
+                        )
+                }
 
-            Text("Enter your player details that will appear on your card.")
-                .font(theme.fonts.caption)
+                Button(action: {
+                    withAnimation {
+                        viewModel.removePhoto(at: 0)
+                    }
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .background(Circle().fill(Color.black.opacity(0.5)))
+                }
+                .offset(x: 8, y: -8)
+            }
+
+            // Inline photo type chips
+            inlinePhotoTypeSelector
+        }
+    }
+
+    private var inlinePhotoTypeSelector: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("PHOTO TYPE")
+                .font(.system(size: 11, weight: .bold))
                 .foregroundColor(theme.textSecondary)
-
-            VStack(spacing: 16) {
-                modernInputRow(
-                    title: "Name",
-                    value: viewModel.playerName.isEmpty ? "Enter Name" : viewModel.playerName,
-                    icon: "person.fill",
-                    isSet: !viewModel.playerName.isEmpty,
-                    action: { viewModel.showingNameEditor = true }
-                )
-
-                modernInputRow(
-                    title: "Number",
-                    value: viewModel.jerseyNumber.isEmpty ? "--" : "#\(viewModel.jerseyNumber)",
-                    icon: "number",
-                    isSet: !viewModel.jerseyNumber.isEmpty,
-                    action: { viewModel.showingNumberEditor = true }
-                )
-
-                modernInputRow(
-                    title: "Position",
-                    value: viewModel.position?.rawValue ?? "Select",
-                    icon: "sportscourt.fill",
-                    isSet: viewModel.position != nil,
-                    action: { viewModel.showingPositionEditor = true }
-                )
-            }
-        }
-        .sheet(isPresented: $viewModel.showingNameEditor) { nameEditorSheet }
-        .sheet(isPresented: $viewModel.showingNumberEditor) { numberEditorSheet }
-        .sheet(isPresented: $viewModel.showingPositionEditor) { positionEditorSheet }
-    }
-
-    private func modernInputRow(title: String, value: String, icon: String, isSet: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(isSet ? theme.primary.opacity(0.15) : theme.surface)
-                        .frame(width: 44, height: 44)
-
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(isSet ? theme.primary : theme.textSecondary)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(theme.fonts.caption)
-                        .foregroundColor(theme.textSecondary)
-
-                    Text(value)
-                        .font(theme.fonts.bodyBold)
-                        .foregroundColor(isSet ? .white : theme.textSecondary.opacity(0.7))
-                }
-
-                Spacer()
-
-                if isSet {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(theme.success)
-                        .font(.system(size: 20))
-                } else {
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(theme.textSecondary.opacity(0.5))
-                        .font(.system(size: 14, weight: .bold))
-                }
-            }
-            .padding(16)
-            .background(theme.surface.opacity(0.4))
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(isSet ? theme.primary.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-
-    // MARK: - Section Divider
-    private var sectionDivider: some View {
-        HStack(spacing: 12) {
-            Rectangle()
-                .fill(theme.primary.opacity(0.3))
-                .frame(height: 1)
-
-            Image(systemName: "diamond.fill")
-                .font(.system(size: 8))
-                .foregroundColor(theme.primary.opacity(0.5))
-
-            Rectangle()
-                .fill(theme.primary.opacity(0.3))
-                .frame(height: 1)
-        }
-        .padding(.vertical, 8)
-    }
-
-    // MARK: - Jersey Selection Section
-    private var jerseySelectionSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Label("JERSEY STYLE", systemImage: "tshirt.fill")
-                .font(theme.fonts.caption)
-                .fontWeight(.bold)
-                .foregroundColor(theme.primary)
                 .tracking(1)
 
-            // Jersey options - single column list for better readability
-            VStack(spacing: 12) {
-                if viewModel.shouldShowUsePhotoOption {
-                    jerseyOptionRow(
-                        icon: "photo.fill",
-                        title: "Use Photo Jersey",
-                        description: "Jersey from your uploaded photo",
-                        isSelected: viewModel.selectedJerseyOption == .usePhoto,
-                        action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                viewModel.selectedJerseyOption = .usePhoto
-                            }
-                        }
-                    )
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(PhotoUploadType.allCases, id: \.self) { type in
+                        photoTypeChip(type: type)
+                    }
                 }
-
-                jerseyOptionRow(
-                    icon: "hockey.puck.fill",
-                    title: "NHL Team",
-                    description: "Choose from official NHL teams",
-                    isSelected: viewModel.selectedJerseyOption == .nhl,
-                    action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            viewModel.selectedJerseyOption = .nhl
-                        }
-                    }
-                )
-
-                jerseyOptionRow(
-                    icon: "star.fill",
-                    title: "STY Athletic",
-                    description: "Premium branded design",
-                    isSelected: viewModel.selectedJerseyOption == .sty,
-                    action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            viewModel.selectedJerseyOption = .sty
-                        }
-                    }
-                )
-            }
-
-            // Sub-selection view with better spacing
-            if let selectedOption = viewModel.selectedJerseyOption {
-                subSelectionView(for: selectedOption)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .padding(.top, 8)
             }
         }
     }
 
-    // New row-based design for jersey options
-    private func jerseyOptionRow(
-        icon: String,
-        title: String,
-        description: String,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func photoTypeChip(type: PhotoUploadType) -> some View {
         Button(action: {
             HapticManager.shared.playSelection()
-            action()
-        }) {
-            HStack(spacing: 16) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? theme.primary : theme.surface.opacity(0.6))
-                        .frame(width: 52, height: 52)
-
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(isSelected ? .black : theme.primary)
-                }
-
-                // Text content
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(theme.fonts.bodyBold)
-                        .foregroundColor(.white)
-
-                    Text(description)
-                        .font(.system(size: 13))
-                        .foregroundColor(theme.textSecondary)
-                }
-
-                Spacer()
-
-                // Selection indicator
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(theme.primary)
-                } else {
-                    Image(systemName: "circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(theme.textSecondary.opacity(0.3))
-                }
+            withAnimation(.spring(response: 0.3)) {
+                viewModel.selectedPhotoType = type
             }
-            .padding(16)
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: type.icon)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(type.rawValue)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? theme.primary.opacity(0.12) : theme.surface.opacity(0.3))
+                Capsule()
+                    .fill(viewModel.selectedPhotoType == type ? theme.primary : theme.surface.opacity(0.5))
             )
+            .foregroundColor(viewModel.selectedPhotoType == type ? .black : .white)
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? theme.primary : Color.clear, lineWidth: 2)
+                Capsule()
+                    .stroke(viewModel.selectedPhotoType == type ? Color.clear : theme.primary.opacity(0.3), lineWidth: 1)
             )
         }
-        .buttonStyle(PlainButtonStyle())
     }
 
-    private func jerseyOptionCard(
+    // MARK: - Compact Player Info
+    private var compactPlayerInfo: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PLAYER INFO")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(theme.textSecondary)
+                .tracking(1)
+
+            HStack(spacing: 12) {
+                // Name field
+                compactInputField(
+                    icon: "person.fill",
+                    placeholder: "Name",
+                    value: $viewModel.playerName,
+                    width: .infinity
+                )
+
+                // Number field
+                compactInputField(
+                    icon: "number",
+                    placeholder: "#",
+                    value: $viewModel.jerseyNumber,
+                    width: 80,
+                    keyboardType: .numberPad
+                )
+            }
+
+            // Position picker
+            positionChipPicker
+        }
+    }
+
+    private func compactInputField(
         icon: String,
-        title: String,
-        description: String,
-        isSelected: Bool,
-        action: @escaping () -> Void
+        placeholder: String,
+        value: Binding<String>,
+        width: CGFloat? = nil,
+        keyboardType: UIKeyboardType = .default
     ) -> some View {
-        Button(action: {
-            HapticManager.shared.playSelection()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                action()
-            }
-        }) {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? theme.primary : theme.surface)
-                        .frame(width: 60, height: 60)
-                        .shadow(color: isSelected ? theme.primary.opacity(0.5) : Color.clear, radius: 10)
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(theme.primary)
+                .frame(width: 20)
 
-                    Image(systemName: icon)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(isSelected ? .black : theme.primary)
-                }
-
-                VStack(spacing: 4) {
-                    Text(title)
-                        .font(theme.fonts.headline)
-                        .foregroundColor(.white)
-
-                    Text(description)
-                        .font(theme.fonts.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(theme.surface.opacity(isSelected ? 0.6 : 0.3))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(isSelected ? theme.primary : theme.primary.opacity(0.1), lineWidth: isSelected ? 2 : 1)
-            )
-            .scaleEffect(isSelected ? 1.02 : 1.0)
+            TextField(placeholder, text: value)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.white)
+                .keyboardType(keyboardType)
         }
-        .buttonStyle(PlainButtonStyle())
-    }
-
-    @ViewBuilder
-    private func subSelectionView(for option: JerseyOption) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch option {
-            case .usePhoto:
-                usePhotoJerseyPreview
-            case .nhl:
-                nhlTeamSelectionView
-            case .sty:
-                styJerseyPreview
-            }
-        }
-        .padding(16)
-        .background(theme.primary.opacity(0.08))
-        .cornerRadius(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .background(theme.surface.opacity(0.4))
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(theme.primary.opacity(0.3), lineWidth: 1)
         )
+        .frame(maxWidth: width == .infinity ? .infinity : width, alignment: .leading)
+        .frame(width: width != .infinity ? width : nil)
     }
 
+    private var positionChipPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Position.allCases, id: \.self) { position in
+                    Button(action: {
+                        HapticManager.shared.playSelection()
+                        viewModel.position = position
+                    }) {
+                        Text(position.shortName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(viewModel.position == position ? theme.primary : theme.surface.opacity(0.5))
+                            )
+                            .foregroundColor(viewModel.position == position ? .black : .white)
+                            .overlay(
+                                Capsule()
+                                    .stroke(viewModel.position == position ? Color.clear : theme.primary.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                }
+            }
+        }
+    }
 
-    private var nhlTeamSelectionView: some View {
-        VStack(spacing: 0) {
-            if let selectedTeam = viewModel.selectedNHLTeam {
-                HStack(spacing: 12) {
+    // MARK: - Visual Team Picker
+    private var visualTeamPicker: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("JERSEY")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(theme.textSecondary)
+                .tracking(1)
+
+            // Jersey type tabs
+            HStack(spacing: 0) {
+                jerseyTypeTab(title: "NHL Team", option: .nhl)
+                jerseyTypeTab(title: "STY Athletic", option: .sty)
+                if viewModel.shouldShowUsePhotoOption {
+                    jerseyTypeTab(title: "From Photo", option: .usePhoto)
+                }
+            }
+            .background(theme.surface.opacity(0.3))
+            .cornerRadius(12)
+
+            // Selection display based on jersey option
+            if viewModel.selectedJerseyOption == .nhl {
+                nhlTeamSelectionButton
+            } else if viewModel.selectedJerseyOption == .sty {
+                stySelectedBadge
+            } else if viewModel.selectedJerseyOption == .usePhoto {
+                usePhotoSelectedBadge
+            }
+        }
+        .sheet(isPresented: $viewModel.showingNHLTeamPicker) {
+            HockeyCardTeamPickerSheet(selectedTeam: $viewModel.selectedNHLTeam)
+        }
+    }
+
+    private func jerseyTypeTab(title: String, option: JerseyOption) -> some View {
+        Button(action: {
+            HapticManager.shared.playSelection()
+            withAnimation(.spring(response: 0.3)) {
+                viewModel.selectedJerseyOption = option
+                // Auto-open team picker when NHL is selected and no team chosen
+                if option == .nhl && viewModel.selectedNHLTeam == nil {
+                    viewModel.showingNHLTeamPicker = true
+                }
+            }
+        }) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(
+                    viewModel.selectedJerseyOption == option ?
+                    theme.primary : Color.clear
+                )
+                .foregroundColor(viewModel.selectedJerseyOption == option ? .black : .white)
+                .cornerRadius(10)
+        }
+        .padding(3)
+    }
+
+    private var nhlTeamSelectionButton: some View {
+        Button(action: {
+            viewModel.showingNHLTeamPicker = true
+        }) {
+            HStack(spacing: 12) {
+                if let team = viewModel.selectedNHLTeam {
+                    // Team selected - show team info
                     ZStack {
                         Circle()
-                            .fill(theme.success.opacity(0.2))
+                            .fill(team.primaryColor)
                             .frame(width: 44, height: 44)
 
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(theme.success)
+                        if let accent = team.accentColor {
+                            Circle()
+                                .stroke(accent, lineWidth: 2)
+                                .frame(width: 44, height: 44)
+                        }
+
+                        Image(systemName: team.logoSymbol)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(selectedTeam.city)
-                            .font(.system(size: 13))
+                        Text(team.city)
+                            .font(.system(size: 12))
                             .foregroundColor(theme.textSecondary)
-                        Text(selectedTeam.name)
-                            .font(theme.fonts.bodyBold)
+                        Text(team.name)
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                     }
 
                     Spacer()
-                }
-                .padding(.bottom, 12)
-            }
 
-            Button(action: {
-                viewModel.showingNHLTeamPicker = true
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: viewModel.selectedNHLTeam == nil ? "plus.circle.fill" : "arrow.triangle.2.circlepath")
-                        .font(.system(size: 18))
+                    Text("Change")
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(theme.primary)
 
-                    Text(viewModel.selectedNHLTeam == nil ? "Select Team" : "Change Team")
-                        .font(theme.fonts.bodyBold)
-                        .foregroundColor(.white)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(theme.textSecondary)
+                } else {
+                    // No team selected - prompt to select
+                    ZStack {
+                        Circle()
+                            .fill(theme.surface)
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: "hockey.puck.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(theme.primary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Select Your Team")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                        Text("Choose from 32 NHL teams")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.textSecondary)
+                    }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(theme.textSecondary)
                 }
-                .padding(14)
-                .background(theme.surface.opacity(0.5))
-                .cornerRadius(12)
             }
-        }
-        .sheet(isPresented: $viewModel.showingNHLTeamPicker) {
-            NHLTeamPickerSheet(selectedTeam: $viewModel.selectedNHLTeam)
-        }
-    }
-
-    private var usePhotoJerseyPreview: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(theme.success.opacity(0.2))
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(theme.success)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Jersey from Your Photo")
-                    .font(theme.fonts.bodyBold)
-                    .foregroundColor(.white)
-
-                Text("Using the jersey in your uploaded photo")
-                    .font(.system(size: 13))
-                    .foregroundColor(theme.textSecondary)
-            }
-
-            Spacer()
-        }
-    }
-
-    private var styJerseyPreview: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(theme.success.opacity(0.2))
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(theme.success)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("STY Athletic Official")
-                    .font(theme.fonts.bodyBold)
-                    .foregroundColor(.white)
-
-                Text("Premium branded hockey design")
-                    .font(.system(size: 13))
-                    .foregroundColor(theme.textSecondary)
-            }
-
-            Spacer()
-        }
-    }
-
-    // MARK: - Bottom CTA
-    private var bottomCTA: some View {
-        Button(action: {
-            HapticManager.shared.playSelection()
-            
-            if MonetizationManager.shared.canGenerateHockeyCard() {
-                showingCardGeneration = true
-            } else {
-                if MonetizationManager.shared.isPremium {
-                    // Pro user hit daily limit
-                    showingDailyLimitAlert = true
-                } else {
-                    // Free user hit lifetime limit
-                    showingPaywall = true
-                }
-            }
-        }) {
-            HStack {
-                Text("Generate Card")
-                    .font(theme.fonts.button)
-                    .fontWeight(.bold)
-
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 16, weight: .bold))
-            }
-            .foregroundColor(theme.background)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                viewModel.isFormComplete ? theme.primary : theme.textSecondary
+            .padding(14)
+            .background(theme.surface.opacity(0.4))
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(viewModel.selectedNHLTeam != nil ? theme.primary.opacity(0.5) : theme.primary.opacity(0.2), lineWidth: 1)
             )
-            .cornerRadius(28)
-            .shadow(color: viewModel.isFormComplete ? theme.primary.opacity(0.4) : Color.clear, radius: 10, x: 0, y: 5)
         }
-        .disabled(!viewModel.isFormComplete)
+    }
+
+    private var stySelectedBadge: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(theme.primary.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "star.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(theme.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("STY Athletic")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                Text("Premium branded design")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.textSecondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 24))
+                .foregroundColor(theme.success)
+        }
+        .padding(14)
+        .background(theme.surface.opacity(0.4))
+        .cornerRadius(14)
+    }
+
+    private var usePhotoSelectedBadge: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(theme.primary.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "photo.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(theme.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Jersey from Photo")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                Text("Using your uploaded photo's jersey")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.textSecondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 24))
+                .foregroundColor(theme.success)
+        }
+        .padding(14)
+        .background(theme.surface.opacity(0.4))
+        .cornerRadius(14)
+    }
+
+    // MARK: - Sticky Bottom CTA
+    private var stickyBottomCTA: some View {
+        VStack(spacing: 0) {
+            // Validation hints (if incomplete)
+            if !viewModel.isFormComplete {
+                validationHints
+                    .padding(.bottom, 12)
+            }
+
+            Button(action: {
+                HapticManager.shared.playSelection()
+
+                if MonetizationManager.shared.canGenerateHockeyCard() {
+                    showingCardGeneration = true
+                } else {
+                    if MonetizationManager.shared.isPremium {
+                        showingDailyLimitAlert = true
+                    } else {
+                        showingPaywall = true
+                    }
+                }
+            }) {
+                HStack(spacing: 10) {
+                    Text("Generate Card")
+                        .font(.system(size: 18, weight: .bold))
+
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 16, weight: .bold))
+                }
+                .foregroundColor(viewModel.isFormComplete ? .black : .white.opacity(0.5))
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(
+                    viewModel.isFormComplete ?
+                    theme.primary :
+                    theme.surface.opacity(0.5)
+                )
+                .cornerRadius(29)
+                .shadow(color: viewModel.isFormComplete ? theme.primary.opacity(0.4) : Color.clear, radius: 12, x: 0, y: 6)
+            }
+            .disabled(!viewModel.isFormComplete)
+        }
         .padding(.horizontal, 20)
-        .padding(.bottom, 20)
+        .padding(.bottom, 24)
+        .padding(.top, 12)
         .background(
-            LinearGradient(colors: [theme.background.opacity(0), theme.background], startPoint: .top, endPoint: .bottom)
-                .frame(height: 100)
-                .offset(y: 20)
+            LinearGradient(
+                colors: [theme.background.opacity(0), theme.background, theme.background],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
         )
     }
 
-    // MARK: - Editor Sheets
-    private var nameEditorSheet: some View {
-        VStack(spacing: 0) {
-            sheetHeader(title: "PLAYER NAME")
-
-            VStack(spacing: 24) {
-                TextField("Enter player name", text: $viewModel.playerName)
-                    .font(theme.fonts.title)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(20)
-                    .background(theme.surface.opacity(0.3))
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(theme.primary.opacity(0.5), lineWidth: 1)
-                    )
-
-                Text("This name will appear on your card")
-                    .font(theme.fonts.caption)
-                    .foregroundColor(theme.textSecondary)
+    private var validationHints: some View {
+        HStack(spacing: 16) {
+            if viewModel.selectedPhotoType == nil {
+                hintChip(text: "Select photo type")
             }
-            .padding(24)
-
-            Spacer()
-
-            saveButton(action: {
-                viewModel.showingNameEditor = false
-                viewModel.saveProfileData()
-            })
-        }
-        .background(theme.background.ignoresSafeArea())
-        .presentationDetents([.medium])
-    }
-
-    private var numberEditorSheet: some View {
-        VStack(spacing: 0) {
-            sheetHeader(title: "JERSEY NUMBER")
-
-            VStack(spacing: 32) {
-                Text(viewModel.jerseyNumber.isEmpty ? "--" : "#\(viewModel.jerseyNumber)")
-                    .font(.system(size: 80, weight: .black))
-                    .foregroundStyle(LinearGradient(colors: [theme.primary, theme.accent], startPoint: .top, endPoint: .bottom))
-                    .shadow(color: theme.primary.opacity(0.3), radius: 10)
-
-                Picker("Number", selection: Binding(
-                    get: { Int(viewModel.jerseyNumber) ?? 0 },
-                    set: { viewModel.jerseyNumber = "\($0)"; HapticManager.shared.playSelection() }
-                )) {
-                    ForEach(0...99, id: \.self) { Text("\($0)").tag($0) }
-                }
-                .pickerStyle(.wheel)
+            if viewModel.playerName.isEmpty {
+                hintChip(text: "Add name")
             }
-            .padding(24)
-
-            Spacer()
-
-            saveButton(action: {
-                viewModel.showingNumberEditor = false
-                viewModel.saveProfileData()
-            })
-        }
-        .background(theme.background.ignoresSafeArea())
-        .presentationDetents([.medium])
-    }
-
-    private var positionEditorSheet: some View {
-        VStack(spacing: 0) {
-            sheetHeader(title: "POSITION")
-
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    ForEach(Position.allCases, id: \.self) { position in
-                        Button(action: {
-                            HapticManager.shared.playSelection()
-                            viewModel.position = position
-                        }) {
-                            VStack(spacing: 12) {
-                                Image(systemName: position.icon)
-                                    .font(.system(size: 24))
-                                    .foregroundColor(viewModel.position == position ? .black : theme.primary)
-
-                                Text(position.rawValue)
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(viewModel.position == position ? .black : .white)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 24)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(viewModel.position == position ? theme.primary : theme.surface.opacity(0.4))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(viewModel.position == position ? Color.clear : theme.primary.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-                .padding(24)
+            if viewModel.jerseyNumber.isEmpty {
+                hintChip(text: "Add number")
             }
-
-            saveButton(action: {
-                viewModel.showingPositionEditor = false
-                viewModel.saveProfileData()
-            })
-        }
-        .background(theme.background.ignoresSafeArea())
-        .presentationDetents([.large])
-    }
-
-    private func sheetHeader(title: String) -> some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .font(theme.fonts.headline)
-                    .foregroundColor(.white)
-                    .tracking(1)
-                Spacer()
+            if viewModel.position == nil {
+                hintChip(text: "Select position")
             }
-            .padding(24)
-
-            Divider().background(theme.divider)
+            if !viewModel.isJerseySelectionComplete {
+                hintChip(text: "Select team")
+            }
         }
     }
 
-    private func saveButton(action: @escaping () -> Void) -> some View {
-        Button(action: {
-            action()
-            HapticManager.shared.playNotification(type: .success)
-        }) {
-            Text("Save")
-                .font(theme.fonts.button)
-                .fontWeight(.bold)
-                .foregroundColor(theme.background)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(theme.primary)
-                .cornerRadius(28)
+    private func hintChip(text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 10))
+            Text(text)
+                .font(.system(size: 11, weight: .medium))
         }
-        .padding(24)
+        .foregroundColor(theme.accent)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(theme.accent.opacity(0.15))
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - Position Extension
+extension Position {
+    var shortName: String {
+        switch self {
+        case .center: return "C"
+        case .leftWing: return "LW"
+        case .rightWing: return "RW"
+        case .leftDefense: return "LD"
+        case .rightDefense: return "RD"
+        case .goalie: return "G"
+        }
     }
 }
 
@@ -1106,19 +815,16 @@ class HockeyCardCreationViewModel: ObservableObject {
     @Published var selectedPhotoType: PhotoUploadType? = nil
 
     // Jersey Selection Fields
-    @Published var selectedJerseyOption: JerseyOption? = nil
+    @Published var selectedJerseyOption: JerseyOption? = .nhl  // Default to NHL
     @Published var selectedNHLTeam: NHLTeam? = nil
 
     // UI State
-    @Published var showingNameEditor = false
-    @Published var showingNumberEditor = false
-    @Published var showingPositionEditor = false
     @Published var showingPhotoOptions = false
     @Published var showingImagePicker = false
-    @Published var showingPhotoTypePicker = false
     @Published var showingNHLTeamPicker = false
     @Published var photoSourceType: UIImagePickerController.SourceType = .photoLibrary
-    @Published var currentPhotoIndex: Int = 0
+
+    private var cancellables = Set<AnyCancellable>()
 
     var isPlayerInfoComplete: Bool {
         !playerName.isEmpty && !jerseyNumber.isEmpty && position != nil && !playerPhotos.isEmpty && selectedPhotoType != nil
@@ -1144,12 +850,10 @@ class HockeyCardCreationViewModel: ObservableObject {
     // Check if "Use Photo" option should be shown based on selected photo type
     var shouldShowUsePhotoOption: Bool {
         guard let photoType = selectedPhotoType else {
-            // If no photo type selected yet, show all options
-            return true
+            return false  // Don't show until photo type is selected
         }
 
-        // Only show "Use Photo" for action shots and hockey gear photos
-        // Hide it for headshots and full body photos (no jersey to extract)
+        // Only show for action shots and hockey gear photos
         switch photoType {
         case .actionShot, .hockeyGear:
             return true
@@ -1169,7 +873,6 @@ class HockeyCardCreationViewModel: ObservableObject {
             self?.loadProfileData()
         }
 
-        // Watch for photo type changes and auto-reset jersey selection if needed
         setupPhotoTypeObserver()
     }
 
@@ -1180,14 +883,11 @@ class HockeyCardCreationViewModel: ObservableObject {
 
                 // If "Use Photo" is selected but photo type changes to one that doesn't support it
                 if self.selectedJerseyOption == .usePhoto && !self.shouldShowUsePhotoOption {
-                    // Auto-deselect to prevent invalid state
-                    self.selectedJerseyOption = nil
+                    self.selectedJerseyOption = .nhl  // Reset to NHL
                 }
             }
             .store(in: &cancellables)
     }
-
-    private var cancellables = Set<AnyCancellable>()
 
     private func loadProfileData() {
         if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
@@ -1205,28 +905,6 @@ class HockeyCardCreationViewModel: ObservableObject {
             position = profile.position
         } else if let displayName = AuthenticationManager.shared.currentUser?.displayName {
             playerName = displayName
-        }
-    }
-
-    func saveProfileData() {
-        if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
-           var profile = try? JSONDecoder().decode(PlayerProfile.self, from: profileData) {
-            profile.name = playerName.isEmpty ? nil : playerName
-            profile.jerseyNumber = jerseyNumber.isEmpty ? nil : jerseyNumber
-            profile.position = position
-
-            if let encoded = try? JSONEncoder().encode(profile) {
-                UserDefaults.standard.set(encoded, forKey: "playerProfile")
-            }
-        } else {
-            var profile = PlayerProfile()
-            profile.name = playerName.isEmpty ? nil : playerName
-            profile.jerseyNumber = jerseyNumber.isEmpty ? nil : jerseyNumber
-            profile.position = position
-
-            if let encoded = try? JSONEncoder().encode(profile) {
-                UserDefaults.standard.set(encoded, forKey: "playerProfile")
-            }
         }
     }
 
@@ -1255,16 +933,19 @@ class HockeyCardCreationViewModel: ObservableObject {
         }
     }
 
-    func addPhoto(_ image: UIImage) {
+    func addPhoto(_ image: UIImage, source: String = "library") {
         if playerPhotos.isEmpty {
             playerPhotos.append(image)
         } else {
             playerPhotos[0] = image
         }
+        // Track photo uploaded (Step 2)
+        HockeyCardAnalytics.trackPhotoUploaded(source: source)
     }
 
     func removePhoto(at index: Int) {
         guard index < playerPhotos.count else { return }
         playerPhotos.remove(at: index)
+        selectedPhotoType = nil  // Reset photo type when photo is removed
     }
 }
