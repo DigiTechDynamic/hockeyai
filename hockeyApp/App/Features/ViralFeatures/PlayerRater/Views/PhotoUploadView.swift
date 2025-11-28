@@ -223,7 +223,6 @@ struct PhotoUploadView: View {
                 }
             }
         }
-        .trackScreen("sty_check_photo_upload")
     }
 
     // MARK: - Helpers

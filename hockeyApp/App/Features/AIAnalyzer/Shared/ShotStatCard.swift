@@ -18,10 +18,31 @@ struct ShotStatCard: View {
     let onCancel: (() -> Void)?
 
     @State private var showCancelConfirm = false
-    
-    // Try to load bundled PNG if not present in asset catalog
+
+    // Get the icon asset name for each shot type
+    private var shotTypeIconName: String {
+        switch type {
+        case .wristShot:
+            return "wrist_shot_icon"
+        case .slapShot:
+            return "hockey_icon_white"  // Keep existing slap shot icon
+        case .backhandShot:
+            return "backhand_icon"
+        case .snapShot:
+            return "snap_shot_icon"
+        }
+    }
+
+    // Try to load the shot-type-specific icon from asset catalog or bundle
     private var hockeyUIImage: UIImage? {
         #if canImport(UIKit)
+        // First try the shot-type-specific icon
+        if let img = UIImage(named: shotTypeIconName) { return img }
+        if let path = Bundle.main.path(forResource: shotTypeIconName, ofType: "png"),
+           let img = UIImage(contentsOfFile: path) {
+            return img
+        }
+        // Fallback to generic hockey icon
         if let img = UIImage(named: "hockey_icon_white") { return img }
         if let path = Bundle.main.path(forResource: "hockey_icon_white", ofType: "png"),
            let img = UIImage(contentsOfFile: path) {

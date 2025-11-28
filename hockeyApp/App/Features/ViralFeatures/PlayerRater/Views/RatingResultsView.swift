@@ -160,7 +160,6 @@ struct RatingResultsView: View {
                     viewModel.checkPremiumStatus()
                 }
         }
-        .trackScreen("sty_check_results")
     }
 
     private func startScoreAnimation(to target: Int) {

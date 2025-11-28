@@ -188,7 +188,6 @@ struct ShotRaterProcessingView: View {
         .onDisappear {
             stopHaptics()
         }
-        .trackScreen("shot_rater_processing")
     }
 
     // MARK: - Helper Methods

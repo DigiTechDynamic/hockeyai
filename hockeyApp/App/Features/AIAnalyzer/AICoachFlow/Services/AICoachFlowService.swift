@@ -39,24 +39,6 @@ class AICoachFlowService {
             throw AIAnalyzerError.networkIssue
         }
 
-        // Extract metadata from both videos
-        let frontMetadata = try await extractVideoMetadata(from: frontNetVideoURL)
-        let sideMetadata = try await extractVideoMetadata(from: sideAngleVideoURL)
-
-        // Calculate combined video size in KB
-        let frontFileSize = try? FileManager.default.attributesOfItem(atPath: frontNetVideoURL.path)[.size] as? Int64 ?? 0
-        let sideFileSize = try? FileManager.default.attributesOfItem(atPath: sideAngleVideoURL.path)[.size] as? Int64 ?? 0
-        let totalVideoSizeKB = Int(((frontFileSize ?? 0) + (sideFileSize ?? 0)) / 1024)
-
-        // Track analysis started
-        let provider = "gemini"
-        AIPerformanceAnalytics.trackAnalysisStarted(
-            feature: .aiCoach,
-            provider: provider,
-            imageSizeKB: totalVideoSizeKB,
-            context: "multi_angle_\(shotType.rawValue)"
-        )
-        
         // Create comprehensive analysis prompt
         let prompt = AICoachFlowConfig.createAnalysisPrompt(
             shotType: shotType,
@@ -114,20 +96,6 @@ class AICoachFlowService {
                             response: simpleResponse
                         )
 
-                        // Track successful analysis
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisCompleted(
-                            feature: .aiCoach,
-                            provider: provider,
-                            durationSeconds: duration,
-                            tokensUsed: nil,
-                            responseValid: true,
-                            containsPerson: nil,
-                            scoreGenerated: simpleResponse.overall_rating,
-                            hasPremiumData: true,  // AI Coach always has detailed breakdown
-                            imageSizeKB: totalVideoSizeKB
-                        )
-
                         continuation.resume(returning: analysisResult)
 
                     } catch let parseError {
@@ -138,37 +106,12 @@ class AICoachFlowService {
                         print("🔍 Expected schema: AICoachSimpleResponse")
                         #endif
 
-                        // Track parsing failure
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisFailed(
-                            feature: .aiCoach,
-                            provider: provider,
-                            errorType: .parsingError,
-                            errorMessage: parseError.localizedDescription,
-                            durationBeforeFailure: duration,
-                            retryCount: 0,
-                            imageSizeKB: totalVideoSizeKB
-                        )
-
                         continuation.resume(throwing: AIAnalyzerError.analysisParsingFailed(
                             "Analysis completed but results couldn't be processed. Please try again."
                         ))
                     }
 
                 case .failure(let error):
-                    // Track analysis failure
-                    let duration = Date().timeIntervalSince(startTime)
-                    let errorType = AIPerformanceAnalytics.categorizeError(error)
-                    AIPerformanceAnalytics.trackAnalysisFailed(
-                        feature: .aiCoach,
-                        provider: provider,
-                        errorType: errorType,
-                        errorMessage: error.localizedDescription,
-                        durationBeforeFailure: duration,
-                        retryCount: 0,
-                        imageSizeKB: totalVideoSizeKB
-                    )
-
                     continuation.resume(throwing: AIAnalyzerError.from(error))
                 }
             }

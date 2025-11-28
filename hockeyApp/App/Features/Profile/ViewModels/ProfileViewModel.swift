@@ -38,7 +38,6 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Dependencies
     private let authManager: AuthenticationManager
-    private let analytics = ProfileAnalytics.shared
     private let imageService = ProfileImageService.shared
 
     // MARK: - Private State
@@ -51,8 +50,6 @@ class ProfileViewModel: ObservableObject {
         loadUserData()
         loadProfileImage()
         setupAutoSave()
-
-        analytics.trackProfileViewed()
     }
 
     // MARK: - Auto-Save Setup
@@ -247,13 +244,11 @@ class ProfileViewModel: ObservableObject {
             }
         }
 
-        analytics.trackProfileSaved()
     }
 
     func saveProfileImage() {
         guard let image = profileImage else { return }
         imageService.saveImage(image)
-        analytics.trackProfilePhotoUpdated()
     }
 
     // MARK: - Unit Conversion
@@ -263,7 +258,6 @@ class ProfileViewModel: ObservableObject {
             let kgValue = lbsValue * 0.453592
             weight = String(format: "%.0f", kgValue)
         }
-        analytics.trackUnitChanged(to: "metric")
     }
 
     func convertWeightToImperial() {
@@ -272,7 +266,6 @@ class ProfileViewModel: ObservableObject {
             let lbsValue = kgValue * 2.20462
             weight = String(format: "%.0f", lbsValue)
         }
-        analytics.trackUnitChanged(to: "imperial")
     }
 
     // MARK: - Computed Properties
@@ -305,49 +298,39 @@ class ProfileViewModel: ObservableObject {
         return "\(age) years"
     }
 
-    // MARK: - Field Updates (with analytics)
+    // MARK: - Field Updates
     func updateHeight(feet: Int, inches: Int) {
         heightFeet = feet
         heightInches = inches
-        analytics.trackFieldEdited(field: "height", value: "\(feet)'\(inches)\"")
     }
 
     func updateWeight(_ value: String) {
         weight = value
-        analytics.trackFieldEdited(field: "weight", value: value)
     }
 
     func updateAge(_ value: String) {
         age = value
-        analytics.trackFieldEdited(field: "age", value: value)
     }
 
     func updateGender(_ gender: Gender) {
         selectedGender = gender
-        analytics.trackFieldEdited(field: "gender", value: gender.rawValue)
     }
 
     func updatePosition(_ position: Position) {
         selectedPosition = position
         selectedPlayStyle = nil // Reset play style when position changes
-        analytics.trackFieldEdited(field: "position", value: position.rawValue)
     }
 
     func updateHandedness(_ handedness: Handedness) {
         selectedHandedness = handedness
-        analytics.trackFieldEdited(field: "handedness", value: handedness.rawValue)
     }
 
     func updatePlayStyle(_ playStyle: PlayStyle?) {
         selectedPlayStyle = playStyle
-        if let style = playStyle {
-            analytics.trackFieldEdited(field: "play_style", value: style.rawValue)
-        }
     }
 
     func updateJerseyNumber(_ number: String) {
         jerseyNumber = number
-        analytics.trackFieldEdited(field: "jersey_number", value: number)
     }
 
     func getJerseyNumberDisplay() -> String {

@@ -45,13 +45,6 @@ class PlayerRaterService {
         let imageSizeKB = imageData.count / 1024
         print("📸 [PlayerRaterService] Optimized image size: \(imageSizeKB)KB")
 
-        // Track AI analysis started
-        AIPerformanceAnalytics.trackAnalysisStarted(
-            feature: .styCheck,
-            provider: provider.providerName,
-            imageSizeKB: imageSizeKB
-        )
-
         // Create analysis prompt (simpler for onboarding)
         let prompt = isOnboarding ? createOnboardingPrompt() : createAnalysisPrompt()
 
@@ -113,41 +106,6 @@ class PlayerRaterService {
                         let duration = Date().timeIntervalSince(startTime)
                         print("⏱️ [PlayerRaterService] Total analysis time: \(String(format: "%.2f", duration))s")
 
-                        // Track successful AI analysis completion
-                        AIPerformanceAnalytics.trackAnalysisCompleted(
-                            feature: .styCheck,
-                            provider: provider.providerName,
-                            durationSeconds: duration,
-                            tokensUsed: nil, // Token count not available in response
-                            responseValid: true,
-                            containsPerson: raterResponse.contains_person,
-                            scoreGenerated: raterResponse.overall_score,
-                            hasPremiumData: raterResponse.premiumIntangibles != nil,
-                            imageSizeKB: imageSizeKB
-                        )
-
-                        // Track quality issues if any (skip premium check for onboarding)
-                        if raterResponse.ai_comment.isEmpty {
-                            AIPerformanceAnalytics.trackQualityIssue(
-                                feature: .styCheck,
-                                issueType: .missingComment,
-                                score: raterResponse.overall_score,
-                                hasComment: false,
-                                hasPremiumData: raterResponse.premiumIntangibles != nil
-                            )
-                        }
-
-                        // Only check for missing premium data in full STY Check (not onboarding)
-                        if !isOnboarding && raterResponse.contains_person && raterResponse.premiumIntangibles == nil {
-                            AIPerformanceAnalytics.trackQualityIssue(
-                                feature: .styCheck,
-                                issueType: .missingPremiumData,
-                                score: raterResponse.overall_score,
-                                hasComment: !raterResponse.ai_comment.isEmpty,
-                                hasPremiumData: false
-                            )
-                        }
-
                         // Create PlayerRating from response (includes premium intangibles)
                         let rating = PlayerRating(
                             overallScore: raterResponse.overall_score,
@@ -176,36 +134,12 @@ class PlayerRaterService {
                         print("💥 Error: \(parseError.localizedDescription)")
                         #endif
 
-                        // Track parsing failure
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisFailed(
-                            feature: .styCheck,
-                            provider: provider.providerName,
-                            errorType: .parsingError,
-                            errorMessage: parseError.localizedDescription,
-                            durationBeforeFailure: duration,
-                            imageSizeKB: imageSizeKB
-                        )
-
                         continuation.resume(throwing: AIAnalyzerError.analysisParsingFailed(
                             "Rating completed but results couldn't be processed. Please try again."
                         ))
                     }
 
                 case .failure(let error):
-                    // Track AI failure
-                    let duration = Date().timeIntervalSince(startTime)
-                    let errorType = AIPerformanceAnalytics.categorizeError(error)
-
-                    AIPerformanceAnalytics.trackAnalysisFailed(
-                        feature: .styCheck,
-                        provider: provider.providerName,
-                        errorType: errorType,
-                        errorMessage: error.localizedDescription,
-                        durationBeforeFailure: duration,
-                        imageSizeKB: imageSizeKB
-                    )
-
                     continuation.resume(throwing: AIAnalyzerError.from(error))
                 }
             }

@@ -114,26 +114,24 @@ struct AICoachFlowView: View {
 
                     case "ai-coach-results":
                         if let validationError = flowState.validationError {
-                            AIAnalysisErrorView(
-                                error: validationError as Error,
-                                featureName: "AI Shot Coach",
+                            AIServiceErrorView(
+                                errorType: AIServiceErrorType.from(analyzerError: validationError),
                                 onRetry: {
                                     flowState.validationError = nil
                                     flowState.restart()
                                 },
-                                onCancel: {
+                                onDismiss: {
                                     flowState.restart()
                                 }
                             )
                         } else if let networkError = flowState.error {
-                            AIAnalysisErrorView(
-                                error: networkError,
-                                featureName: "AI Shot Coach",
+                            AIServiceErrorView(
+                                errorType: AIServiceErrorType.from(networkError),
                                 onRetry: {
                                     flowState.error = nil
                                     flowState.restart()
                                 },
-                                onCancel: {
+                                onDismiss: {
                                     flowState.restart()
                                 }
                             )
@@ -244,7 +242,6 @@ struct AICoachFlowView: View {
             AIAnalysisFacade.cancelActiveRequests()
             dismiss()
         }
-        .trackScreen("ai_coach_flow")
     }
 
     // MARK: - Shot Type Selection View

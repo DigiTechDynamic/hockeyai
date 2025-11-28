@@ -148,49 +148,25 @@ struct CardGenerationView: View {
     // MARK: - Bottom Actions
     private var bottomActions: some View {
         VStack(spacing: 12) {
-            // Primary action row - Save & Share
-            HStack(spacing: 12) {
-                // Save to Photos button
-                Button(action: {
-                    viewModel.saveCard()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 16, weight: .bold))
-                        Text("Save")
-                            .font(.system(size: 15, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(theme.surface.opacity(0.5))
-                    .cornerRadius(25)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 25)
-                            .stroke(theme.primary.opacity(0.5), lineWidth: 1)
-                    )
+            // Save to Photos button
+            Button(action: {
+                viewModel.saveCard()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 16, weight: .bold))
+                    Text("Save to Photos")
+                        .font(.system(size: 15, weight: .bold))
                 }
-
-                // Share button
-                Button(action: {
-                    viewModel.shareCard()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16, weight: .bold))
-                        Text("Share")
-                            .font(.system(size: 15, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(theme.surface.opacity(0.5))
-                    .cornerRadius(25)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 25)
-                            .stroke(theme.primary.opacity(0.5), lineWidth: 1)
-                    )
-                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(theme.surface.opacity(0.5))
+                .cornerRadius(25)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 25)
+                        .stroke(theme.primary.opacity(0.5), lineWidth: 1)
+                )
             }
 
             // Create Another Card - BIG CTA

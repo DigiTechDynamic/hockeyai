@@ -37,19 +37,6 @@ class SkillCheckService {
         // Get video metadata
         let metadata = try await extractVideoMetadata(from: videoURL)
 
-        // Calculate video size in KB
-        let fileSize = try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int64 ?? 0
-        let videoSizeKB = Int((fileSize ?? 0) / 1024)
-
-        // Track analysis started
-        let provider = "gemini"  // Using Gemini for video analysis
-        AIPerformanceAnalytics.trackAnalysisStarted(
-            feature: .skillCheck,
-            provider: provider,
-            imageSizeKB: videoSizeKB,
-            context: "skill_check"
-        )
-
         // Create analysis prompt
         let prompt = createAnalysisPrompt()
 
@@ -98,31 +85,6 @@ class SkillCheckService {
                             analysisMetadata: updatedMetadata
                         )
 
-                        // Track successful analysis
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisCompleted(
-                            feature: .skillCheck,
-                            provider: provider,
-                            durationSeconds: duration,
-                            tokensUsed: nil,
-                            responseValid: true,
-                            containsPerson: nil,  // Not applicable for video
-                            scoreGenerated: skillResponse.overall_rating,
-                            hasPremiumData: skillResponse.premiumBreakdown != nil,
-                            imageSizeKB: videoSizeKB
-                        )
-
-                        // Track quality issues if premium data is missing
-                        if skillResponse.premiumBreakdown == nil {
-                            AIPerformanceAnalytics.trackQualityIssue(
-                                feature: .skillCheck,
-                                issueType: .missingPremiumData,
-                                score: skillResponse.overall_rating,
-                                hasComment: skillResponse.aiComment != nil && !skillResponse.aiComment.isEmpty,
-                                hasPremiumData: false
-                            )
-                        }
-
                         continuation.resume(returning: analysisResult)
 
                     } catch let parseError {
@@ -132,37 +94,12 @@ class SkillCheckService {
                         print("💥 Error: \(parseError.localizedDescription)")
                         #endif
 
-                        // Track parsing failure
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisFailed(
-                            feature: .skillCheck,
-                            provider: provider,
-                            errorType: .parsingError,
-                            errorMessage: parseError.localizedDescription,
-                            durationBeforeFailure: duration,
-                            retryCount: 0,
-                            imageSizeKB: videoSizeKB
-                        )
-
                         continuation.resume(throwing: AIAnalyzerError.analysisParsingFailed(
                             "Analysis completed but results couldn't be processed. Please try again."
                         ))
                     }
 
                 case .failure(let error):
-                    // Track analysis failure
-                    let duration = Date().timeIntervalSince(startTime)
-                    let errorType = AIPerformanceAnalytics.categorizeError(error)
-                    AIPerformanceAnalytics.trackAnalysisFailed(
-                        feature: .skillCheck,
-                        provider: provider,
-                        errorType: errorType,
-                        errorMessage: error.localizedDescription,
-                        durationBeforeFailure: duration,
-                        retryCount: 0,
-                        imageSizeKB: videoSizeKB
-                    )
-
                     continuation.resume(throwing: AIAnalyzerError.from(error))
                 }
             }

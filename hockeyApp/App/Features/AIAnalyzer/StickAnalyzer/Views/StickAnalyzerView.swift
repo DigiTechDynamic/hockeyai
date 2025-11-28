@@ -121,15 +121,14 @@ struct StickAnalyzerView: View {
                     case "stick-analysis-results":
                         Group {
                             if let error = viewModel.error {
-                                AIAnalysisErrorView(
-                                    error: error,
-                                    featureName: "Stick Analyzer",
+                                AIServiceErrorView(
+                                    errorType: AIServiceErrorType.from(analyzerError: error),
                                     onRetry: {
                                         viewModel.error = nil
                                         flowState.goBack()
                                         viewModel.performAnalysis()
                                     },
-                                    onCancel: {
+                                    onDismiss: {
                                         dismiss()
                                     }
                                 )
@@ -232,7 +231,6 @@ struct StickAnalyzerView: View {
             AIAnalysisFacade.cancelActiveRequests()
             dismiss()
         }
-        .trackScreen("stick_analyzer_flow")
     }
 
     // MARK: - Shooting Preference Selection View

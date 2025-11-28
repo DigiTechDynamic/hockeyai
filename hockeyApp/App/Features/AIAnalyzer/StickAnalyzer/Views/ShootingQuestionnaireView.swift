@@ -121,7 +121,6 @@ struct ShootingQuestionnaireView: View {
             )
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentQuestion)
-        .trackScreen("stick_analyzer_questionnaire")
     }
     
     // MARK: - Question 1: Priority Focus

@@ -114,7 +114,6 @@ struct SkillCheckResultsView: View {
                     checkPremiumStatus()
                 }
         }
-        .trackScreen("skill_check_results")
     }
 
     private func startScoreAnimation(to target: Int) {

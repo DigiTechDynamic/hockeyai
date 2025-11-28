@@ -48,7 +48,6 @@ struct PlayerRaterFlowView: View {
         .interactiveDismissDisabled(viewModel.currentStep == .analyzing)
         .background(ThemedBackground())
         .preferredColorScheme(.dark)
-        .trackScreen("sty_check_flow")
         // AI Consent Dialog (shown before first AI feature use) as overlay card
         .overlay {
             if viewModel.showAIConsentDialog {

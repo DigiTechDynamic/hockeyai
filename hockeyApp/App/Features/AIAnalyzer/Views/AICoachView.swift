@@ -69,6 +69,5 @@ struct AICoachView: View {
                 }
             )
         }
-        .trackScreen("ai_coach")
     }
 }

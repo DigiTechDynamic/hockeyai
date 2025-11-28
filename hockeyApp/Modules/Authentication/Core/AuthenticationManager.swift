@@ -204,22 +204,18 @@ extension AuthenticationManager: AuthenticationProtocol {
             }
         }
 
-        // 3. Reset screen tracking FIRST (before clearing UserDefaults)
-        print("[Auth] 📊 Resetting screen tracking data...")
-        ScreenTracker.shared.resetAllData()
-
-        // 4. Clear ALL UserDefaults
+        // 3. Clear ALL UserDefaults
         print("[Auth] 🗑️ Clearing UserDefaults...")
         let domain = Bundle.main.bundleIdentifier!
         defaults.removePersistentDomain(forName: domain)
 
-        // 5. Restore preserved values
+        // 4. Restore preserved values
         print("[Auth] 💾 Restoring preserved settings...")
         for (key, value) in preservedValues {
             defaults.set(value, forKey: key)
         }
 
-        // 6. Ensure STY theme is set if no theme was preserved
+        // 5. Ensure STY theme is set if no theme was preserved
         let themeKey = UserDefaults.moduleKey("selectedTheme")
         if preservedValues[themeKey] == nil {
             print("[Auth] 🎨 No saved theme found, setting default STY theme")
@@ -228,11 +224,11 @@ extension AuthenticationManager: AuthenticationProtocol {
             print("[Auth] 🎨 Restored theme preference: \(savedTheme)")
         }
 
-        // 7. Force synchronize UserDefaults to ensure values are persisted before restart
+        // 6. Force synchronize UserDefaults to ensure values are persisted before restart
         print("[Auth] 💾 Synchronizing UserDefaults...")
         defaults.synchronize()
 
-        // 8. Delete Firebase anonymous user to get fresh UID on next launch
+        // 7. Delete Firebase anonymous user to get fresh UID on next launch
         print("[Auth] 🔥 Deleting Firebase user...")
         if let currentUser = auth.currentUser, currentUser.isAnonymous {
             do {
@@ -243,7 +239,7 @@ extension AuthenticationManager: AuthenticationProtocol {
             }
         }
 
-        // 9. Clear RevenueCat completely
+        // 8. Clear RevenueCat completely
         print("[Auth] 💰 Logging out RevenueCat...")
         #if canImport(RevenueCat)
         await withCheckedContinuation { continuation in
@@ -254,7 +250,7 @@ extension AuthenticationManager: AuthenticationProtocol {
         print("[Auth] ✅ RevenueCat logged out")
         #endif
 
-        // 10. Clear paywall assignments and monetization state
+        // 9. Clear paywall assignments and monetization state
         print("[Auth] 🎯 Clearing paywall assignments...")
         PaywallRegistry.clearAssignments()
 
@@ -268,29 +264,24 @@ extension AuthenticationManager: AuthenticationProtocol {
             MonetizationManager.shared.availablePackages = []
         }
 
-        // 11. Reset Mixpanel (clear all cached data and generate fresh distinct ID)
+        // 10. Reset Mixpanel (clear all cached data and generate fresh distinct ID)
         print("[Auth] 📈 Resetting Mixpanel...")
         AnalyticsManager.shared.resetMixpanel()
 
-        // 12. Clear keychain items (app secrets, stored credentials)
+        // 11. Clear keychain items (app secrets, stored credentials)
         print("[Auth] 🔐 Clearing keychain...")
         AppSecrets.shared.clearAll()
 
-        // 13. Clear any cached data
+        // 12. Clear any cached data
         print("[Auth] 🧹 Clearing URL cache...")
         URLCache.shared.removeAllCachedResponses()
 
-        // 14. Clear image cache if using SDWebImage or similar
-        // SDImageCache.shared.clearMemory()
-        // SDImageCache.shared.clearDisk()
-
-        // 15. Post notification to reload app state
+        // 13. Post notification to reload app state
         await MainActor.run {
             NotificationCenter.default.post(name: NSNotification.Name("AppStateReset"), object: nil)
         }
 
         print("[Auth] ✅ Complete reset finished - app is now in fresh state")
-        print("[Auth] 🆕 Next analytics events will be: is_first_view=true, view_count=1")
 
         // Terminate app to ensure truly fresh state on next launch
         // This clears:

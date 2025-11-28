@@ -81,7 +81,6 @@ struct SideAngleVideoCaptureView: View {
             showInstructions = false
             showUploadCard = false
         }
-        .trackScreen("ai_coach_side_video")
     }
 
     // MARK: - Combined Demo Section

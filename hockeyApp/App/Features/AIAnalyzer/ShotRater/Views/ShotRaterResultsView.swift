@@ -76,7 +76,6 @@ struct ShotRaterResultsView: View {
             // Debug toggle removed - using video upload approach
         }
         // Deep link state now managed by NotificationKit
-        .trackScreen("shot_rater_results")
     }
     
     

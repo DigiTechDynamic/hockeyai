@@ -42,19 +42,6 @@ class ShotRaterService {
         // Get video metadata
         let metadata = try await extractVideoMetadata(from: videoURL)
 
-        // Calculate video size in KB
-        let fileSize = try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int64 ?? 0
-        let videoSizeKB = Int((fileSize ?? 0) / 1024)
-
-        // Track analysis started
-        let provider = "gemini"
-        AIPerformanceAnalytics.trackAnalysisStarted(
-            feature: .shotRater,
-            provider: provider,
-            imageSizeKB: videoSizeKB,
-            context: shotType.rawValue
-        )
-
         // Create analysis prompt
         let prompt = createAnalysisPrompt(for: shotType)
 
@@ -115,20 +102,6 @@ class ShotRaterService {
                             hasTypeMismatch: false
                         )
 
-                        // Track successful analysis
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisCompleted(
-                            feature: .shotRater,
-                            provider: provider,
-                            durationSeconds: duration,
-                            tokensUsed: nil,
-                            responseValid: true,
-                            containsPerson: nil,
-                            scoreGenerated: shotResponse.overall_rating,
-                            hasPremiumData: true,  // Shot rater always has breakdown
-                            imageSizeKB: videoSizeKB
-                        )
-
                         continuation.resume(returning: analysisResult)
 
                     } catch let parseError {
@@ -138,37 +111,12 @@ class ShotRaterService {
                         print("💥 Error: \(parseError.localizedDescription)")
                         #endif
 
-                        // Track parsing failure
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisFailed(
-                            feature: .shotRater,
-                            provider: provider,
-                            errorType: .parsingError,
-                            errorMessage: parseError.localizedDescription,
-                            durationBeforeFailure: duration,
-                            retryCount: 0,
-                            imageSizeKB: videoSizeKB
-                        )
-
                         continuation.resume(throwing: AIAnalyzerError.analysisParsingFailed(
                             "Analysis completed but results couldn't be processed. Please try again."
                         ))
                     }
 
                 case .failure(let error):
-                    // Track analysis failure
-                    let duration = Date().timeIntervalSince(startTime)
-                    let errorType = AIPerformanceAnalytics.categorizeError(error)
-                    AIPerformanceAnalytics.trackAnalysisFailed(
-                        feature: .shotRater,
-                        provider: provider,
-                        errorType: errorType,
-                        errorMessage: error.localizedDescription,
-                        durationBeforeFailure: duration,
-                        retryCount: 0,
-                        imageSizeKB: videoSizeKB
-                    )
-
                     continuation.resume(throwing: AIAnalyzerError.from(error))
                 }
             }

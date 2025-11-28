@@ -238,7 +238,6 @@ struct AuthenticationView: View {
         .onAppear {
             animateIn()
         }
-        .trackScreen("authentication")
     }
 
     private func animateIn() {

@@ -110,7 +110,6 @@ struct SkillCheckCaptureView: View {
             showInstructions = false
             showUploadCard = false
         }
-        .trackScreen("skill_check_capture")
     }
 
     // MARK: - Combined Demo Section

@@ -11,7 +11,6 @@ struct HockeyMainView: View {
     @State private var showSettings = false
     @State private var previousTab = 0
     @State private var profileImage: UIImage?
-    @State private var showSoftUpsell = false
     @State private var isHeaderVisible = true
     @Namespace private var headerAnimation
     @State private var showPaywallFromHeader = false
@@ -49,7 +48,6 @@ struct HockeyMainView: View {
         }
         .onAppear {
             loadProfileImage()
-            checkForTeamSelector()
             // Prime entrance animations for the initial tab
             incrementEntranceTick(for: selectedTab)
         }
@@ -58,10 +56,6 @@ struct HockeyMainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ProfileImageUpdated"))) { _ in
             loadProfileImage()
-        }
-        .fullScreenCover(isPresented: $showSoftUpsell) {
-            SoftOnboardingUpsellView()
-                .preferredColorScheme(.dark)
         }
         .fullScreenCover(isPresented: $showPaywallFromHeader) {
             PaywallPresenter(source: headerPaywallSource)
@@ -195,16 +189,6 @@ struct HockeyMainView: View {
         }
     }
     
-    // MARK: - Check for Post-Onboarding Flow
-    private func checkForTeamSelector() {
-        // MONETIZATION OPTIMIZATION: Show soft upsell immediately with no delay
-        // Team selector removed to prevent interrupting monetization flow
-        if UserDefaults.standard.bool(forKey: "showSoftUpsellAfterOnboarding") {
-            UserDefaults.standard.set(false, forKey: "showSoftUpsellAfterOnboarding")
-            // Show immediately - no delay
-            showSoftUpsell = true
-        }
-    }
 
     private func incrementEntranceTick(for index: Int) {
         guard index >= 0 && index < tabEntranceTick.count else { return }

@@ -76,14 +76,13 @@ struct ShotRaterView: View {
 
                     case "results":
                         if let error = viewModel.currentError {
-                            AIAnalysisErrorView(
-                                error: error,
-                                featureName: "Shot Rater",
+                            AIServiceErrorView(
+                                errorType: AIServiceErrorType.from(analyzerError: error),
                                 onRetry: {
                                     viewModel.reset()
                                     flowState.restart()
                                 },
-                                onCancel: {
+                                onDismiss: {
                                     flowState.restart()
                                 }
                             )
@@ -158,7 +157,6 @@ struct ShotRaterView: View {
             onAccessGranted: handleMonetizationGranted,
             onDismissOrCancel: handleMonetizationDismissed
         )
-        .trackScreen("shot_rater_flow")
     }
 
     // MARK: - Setup

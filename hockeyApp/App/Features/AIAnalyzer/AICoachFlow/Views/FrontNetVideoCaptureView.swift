@@ -79,7 +79,6 @@ struct FrontNetVideoCaptureView: View {
             showInstructions = false
             showUploadCard = false
         }
-        .trackScreen("ai_coach_front_video")
     }
 
     // MARK: - Combined Demo Section

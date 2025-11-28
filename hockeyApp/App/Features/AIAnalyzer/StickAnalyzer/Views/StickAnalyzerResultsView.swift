@@ -63,7 +63,6 @@ struct StickAnalyzerResultsView: View {
         .onAppear {
             animateIn()
         }
-        .trackScreen("stick_analyzer_results")
     }
     
     // MARK: - Ideal Specs Card

@@ -161,7 +161,6 @@ struct SkillCheckProcessingView: View {
         .onDisappear {
             stopHaptics()
         }
-        .trackScreen("skill_check_processing")
     }
 
     // MARK: - Helper Methods

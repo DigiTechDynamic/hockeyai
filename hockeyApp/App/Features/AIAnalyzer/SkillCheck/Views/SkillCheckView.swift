@@ -40,14 +40,13 @@ struct SkillCheckView: View {
 
                     case "results":
                         if let error = viewModel.currentError {
-                            AIAnalysisErrorView(
-                                error: error,
-                                featureName: "Skill Check",
+                            AIServiceErrorView(
+                                errorType: AIServiceErrorType.from(analyzerError: error),
                                 onRetry: {
                                     viewModel.reset()
                                     flowState.restart()
                                 },
-                                onCancel: {
+                                onDismiss: {
                                     flowState.restart()
                                 }
                             )
@@ -118,7 +117,6 @@ struct SkillCheckView: View {
             onAccessGranted: handleMonetizationGranted,
             onDismissOrCancel: handleMonetizationDismissed
         )
-        .trackScreen("skill_check_flow")
     }
 
     // MARK: - Stage Views

@@ -133,7 +133,6 @@ struct STYCheckIntroScreen: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(theme.text)
         }
-        .trackScreen("onboarding_sty_intro")
     }
 }
 

@@ -87,7 +87,6 @@ struct HomeView: View {
         .fullScreenCover(item: $activeModal) { modal in
             modalView(for: modal)
         }
-        .trackScreen("home")
     }
 
     // MARK: - Modal Views

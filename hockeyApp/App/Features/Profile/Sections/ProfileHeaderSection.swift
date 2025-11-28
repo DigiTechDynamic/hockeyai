@@ -11,7 +11,6 @@ struct ProfileHeaderSection: View {
             // Avatar
             Button(action: {
                 viewModel.showingPhotoOptions = true
-                ProfileAnalytics.shared.trackSectionExpanded(section: "photo_options")
             }) {
                 ZStack {
                     if let profileImage = viewModel.profileImage {

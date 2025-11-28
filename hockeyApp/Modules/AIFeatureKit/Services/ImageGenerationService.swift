@@ -4,13 +4,105 @@ import UIKit
 // MARK: - Image Generation Provider
 /// Enum to select which backend to use for image generation
 enum ImageGenerationProvider: String, CaseIterable {
-    case geminiDirect = "gemini_direct"  // Google's Gemini API directly
-    case falAI = "fal_ai"                // fal.ai (same Gemini model, no daily limits)
+    case geminiDirect = "gemini_direct"  // Google's Gemini API directly (FREE during preview)
+    case falAI = "fal_ai"                // fal.ai (same Gemini model, $0.15/image, no daily limits)
 
     var displayName: String {
         switch self {
         case .geminiDirect: return "Gemini Direct"
         case .falAI: return "fal.ai"
+        }
+    }
+}
+
+// MARK: - Gemini Rate Limit Tracker
+/// Tracks when Gemini API returns 429 (rate limit exceeded) for the SHARED API key
+/// The 250 RPD limit is per API key (shared across ALL users), not per device
+/// Strategy: Always try Gemini first, fall back to fal.ai on 429, remember until midnight PT
+/// Thread-safe for concurrent access from multiple requests
+final class GeminiRateLimitTracker {
+    static let shared = GeminiRateLimitTracker()
+
+    private let userDefaults = UserDefaults.standard
+    private let rateLimitHitKey = "gemini_rate_limit_hit_date"
+
+    /// Serial queue for thread-safe access
+    private let queue = DispatchQueue(label: "com.hockeyapp.gemini.ratelimit", qos: .userInitiated)
+
+    private init() {}
+
+    /// Whether we've received a 429 today (API key is at limit for all users)
+    /// Thread-safe read
+    var isAtLimit: Bool {
+        return queue.sync {
+            guard let hitDate = userDefaults.object(forKey: rateLimitHitKey) as? Date else {
+                return false
+            }
+
+            // Check if the hit was today (Pacific Time - when Gemini quotas reset)
+            guard let pacificTimeZone = TimeZone(identifier: "America/Los_Angeles") else {
+                // Fallback: if timezone fails, assume not at limit to avoid blocking users
+                print("⚠️ [GeminiRateLimitTracker] Failed to get Pacific timezone, defaulting to not at limit")
+                return false
+            }
+
+            var calendar = Calendar.current
+            calendar.timeZone = pacificTimeZone
+
+            let today = calendar.startOfDay(for: Date())
+            let hitDay = calendar.startOfDay(for: hitDate)
+
+            // If hit was today or in the future (clock skew protection), we're still at limit
+            if hitDay >= today {
+                return true
+            } else {
+                // New day - clear the flag
+                userDefaults.removeObject(forKey: rateLimitHitKey)
+                print("🔄 [GeminiRateLimitTracker] New day (Pacific Time) - Gemini limit reset, trying Gemini again")
+                return false
+            }
+        }
+    }
+
+    /// For backwards compatibility
+    var shouldPreferFallback: Bool {
+        return isAtLimit
+    }
+
+    /// Record a rate limit error (429) - remember that API key is exhausted for today
+    /// Thread-safe write
+    func recordRateLimitHit() {
+        queue.sync {
+            // Only record if not already recorded today (avoid redundant writes)
+            if let existingDate = userDefaults.object(forKey: rateLimitHitKey) as? Date,
+               let pacificTimeZone = TimeZone(identifier: "America/Los_Angeles") {
+                var calendar = Calendar.current
+                calendar.timeZone = pacificTimeZone
+                let today = calendar.startOfDay(for: Date())
+                let existingDay = calendar.startOfDay(for: existingDate)
+
+                if existingDay >= today {
+                    // Already recorded today, skip
+                    return
+                }
+            }
+
+            userDefaults.set(Date(), forKey: rateLimitHitKey)
+            print("⚠️ [GeminiRateLimitTracker] 429 received! API key at daily limit (250 RPD). Using fal.ai until midnight PT.")
+        }
+    }
+
+    /// No longer tracking individual requests - limit is shared across all users
+    func recordRequest() {
+        // No-op: We can't track shared API key usage across all users
+        // Just rely on 429 detection
+    }
+
+    /// Clear the rate limit flag (for testing or manual reset)
+    func reset() {
+        queue.sync {
+            userDefaults.removeObject(forKey: rateLimitHitKey)
+            print("🔄 [GeminiRateLimitTracker] Rate limit flag cleared manually")
         }
     }
 }
@@ -79,6 +171,7 @@ final class ImageGenerationService {
         case imageDecodingFailed
         case noImagesGenerated
         case imageUploadFailed
+        case rateLimitExceeded  // HTTP 429 - triggers fallback to fal.ai
 
         var errorDescription: String? {
             switch self {
@@ -91,7 +184,7 @@ final class ImageGenerationService {
             case .decodingError(let error):
                 return "Failed to decode response: \(error.localizedDescription)"
             case .apiError(let message):
-                if message.lowercased().contains("rate limit") {
+                if message.lowercased().contains("rate limit") || message.lowercased().contains("quota") {
                     return "Too many requests. Please wait a moment before trying again."
                 } else {
                     return "Image generation failed: \(message)"
@@ -104,13 +197,31 @@ final class ImageGenerationService {
                 return "No images were generated"
             case .imageUploadFailed:
                 return "Failed to upload reference image"
+            case .rateLimitExceeded:
+                return "Rate limit exceeded. Trying alternate provider..."
+            }
+        }
+
+        /// Whether this error indicates a rate limit that should trigger fallback
+        var isRateLimitError: Bool {
+            switch self {
+            case .rateLimitExceeded:
+                return true
+            case .apiError(let message):
+                let lowercased = message.lowercased()
+                return lowercased.contains("rate limit") ||
+                       lowercased.contains("quota") ||
+                       lowercased.contains("429") ||
+                       lowercased.contains("resource_exhausted")
+            default:
+                return false
             }
         }
     }
 
     // MARK: - Constants
     private enum Constants {
-        static let defaultRequestTimeout: TimeInterval = 120.0  // 2 minutes for image generation
+        static let defaultRequestTimeout: TimeInterval = 180.0  // 3 minutes for image generation (fal.ai can be slow)
         static let maxRetries = 1
         static let retryDelay: TimeInterval = 2.0
 
@@ -150,23 +261,37 @@ final class ImageGenerationService {
     }
 
     /// Convenience initializer that loads API keys from AppSecrets
-    /// Defaults to fal.ai provider if available, falls back to Gemini direct
+    /// Uses smart provider selection: Gemini first (FREE), fal.ai as fallback ($0.15/image)
     convenience init?() {
         let falKey = AppSecrets.shared.falAPIKey
         let geminiKey = AppSecrets.shared.geminiAPIKey
 
-        // Determine provider based on available keys
-        // Prefer fal.ai since it has no daily limits
-        let provider: ImageGenerationProvider
-        if falKey != nil {
-            provider = .falAI
-            print("✅ [ImageGenerationService] Using fal.ai provider (no daily limits)")
-        } else if geminiKey != nil {
-            provider = .geminiDirect
-            print("⚠️ [ImageGenerationService] Using Gemini direct (250/day limit)")
-        } else {
+        // Must have at least one provider available
+        guard falKey != nil || geminiKey != nil else {
             print("❌ [ImageGenerationService] No API keys found")
             return nil
+        }
+
+        // Smart provider selection:
+        // - Use Gemini if available AND not at rate limit
+        // - Fall back to fal.ai if Gemini unavailable OR at rate limit
+        let provider: ImageGenerationProvider
+        let tracker = GeminiRateLimitTracker.shared
+
+        if geminiKey != nil && !tracker.isAtLimit {
+            provider = .geminiDirect
+            print("✅ [ImageGenerationService] Using Gemini direct (~$0.13/image)")
+        } else if falKey != nil {
+            if tracker.isAtLimit {
+                print("⚠️ [ImageGenerationService] Gemini hit 429 today, using fal.ai ($0.15/image)")
+            } else {
+                print("✅ [ImageGenerationService] Using fal.ai ($0.15/image)")
+            }
+            provider = .falAI
+        } else {
+            // Only Gemini available but at limit - still try Gemini (might work after midnight PT)
+            provider = .geminiDirect
+            print("⚠️ [ImageGenerationService] Only Gemini available, attempting despite previous 429")
         }
 
         self.init(configuration: Configuration(
@@ -205,6 +330,9 @@ final class ImageGenerationService {
     // MARK: - Image Generation
 
     /// Generate an image from a text prompt
+    /// Uses smart provider selection with automatic fallback:
+    /// 1. Try Gemini (FREE) first if available and not at rate limit
+    /// 2. Fall back to fal.ai ($0.15/image) on rate limit or if Gemini unavailable
     /// - Parameters:
     ///   - prompt: The text description of the image to generate
     ///   - parameters: Generation parameters (size, aspect ratio, etc.)
@@ -218,7 +346,7 @@ final class ImageGenerationService {
     ) {
         switch configuration.provider {
         case .geminiDirect:
-            generateImageWithGeminiDirect(
+            generateImageWithGeminiDirectAndFallback(
                 prompt: prompt,
                 parameters: parameters,
                 referenceImages: referenceImages,
@@ -231,6 +359,66 @@ final class ImageGenerationService {
                 referenceImages: referenceImages,
                 completion: completion
             )
+        }
+    }
+
+    /// Generate with Gemini, automatically falling back to fal.ai on rate limit
+    private func generateImageWithGeminiDirectAndFallback(
+        prompt: String,
+        parameters: GenerationParameters,
+        referenceImages: [UIImage],
+        completion: @escaping (Result<UIImage, Error>) -> Void
+    ) {
+        generateImageWithGeminiDirect(
+            prompt: prompt,
+            parameters: parameters,
+            referenceImages: referenceImages
+        ) { [weak self] result in
+            guard let self = self else { return }
+
+            switch result {
+            case .success(let image):
+                // Success! Record the request and return
+                GeminiRateLimitTracker.shared.recordRequest()
+                completion(.success(image))
+
+            case .failure(let error):
+                // Check if this is a rate limit error
+                let isRateLimit: Bool
+                if let serviceError = error as? ServiceError {
+                    isRateLimit = serviceError.isRateLimitError
+                } else {
+                    // Check error message for rate limit indicators
+                    let errorMessage = error.localizedDescription.lowercased()
+                    isRateLimit = errorMessage.contains("429") ||
+                                  errorMessage.contains("rate limit") ||
+                                  errorMessage.contains("quota") ||
+                                  errorMessage.contains("resource_exhausted")
+                }
+
+                if isRateLimit {
+                    // Rate limit hit - record it and try fal.ai fallback
+                    GeminiRateLimitTracker.shared.recordRateLimitHit()
+
+                    // Check if fal.ai is available for fallback
+                    if self.configuration.falAPIKey != nil {
+                        print("🔄 [ImageGenerationService] Gemini rate limited, falling back to fal.ai...")
+                        self.generateImageWithFalAI(
+                            prompt: prompt,
+                            parameters: parameters,
+                            referenceImages: referenceImages,
+                            completion: completion
+                        )
+                    } else {
+                        // No fallback available
+                        print("❌ [ImageGenerationService] Rate limited and no fal.ai fallback available")
+                        completion(.failure(ServiceError.rateLimitExceeded))
+                    }
+                } else {
+                    // Not a rate limit error, pass through
+                    completion(.failure(error))
+                }
+            }
         }
     }
 
@@ -333,12 +521,26 @@ final class ImageGenerationService {
             }
 
             guard (200...299).contains(httpResponse.statusCode) else {
-                if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let detail = errorJson["detail"] as? String {
-                    print("❌ [ImageGenerationService] fal.ai API error: \(detail)")
-                    completion(.failure(ServiceError.apiError(detail)))
-                } else {
-                    completion(.failure(ServiceError.apiError("HTTP \(httpResponse.statusCode)")))
+                // Handle specific HTTP errors
+                switch httpResponse.statusCode {
+                case 429:
+                    // fal.ai rate limit (20 concurrent requests max)
+                    print("⚠️ [ImageGenerationService] fal.ai 429 - Too many concurrent requests, try again shortly")
+                    completion(.failure(ServiceError.apiError("fal.ai is busy, please try again in a few seconds")))
+                case 401, 403:
+                    print("❌ [ImageGenerationService] fal.ai authentication error")
+                    completion(.failure(ServiceError.apiError("fal.ai API key invalid or expired")))
+                case 500...599:
+                    print("❌ [ImageGenerationService] fal.ai server error (HTTP \(httpResponse.statusCode))")
+                    completion(.failure(ServiceError.apiError("fal.ai server error, please try again")))
+                default:
+                    if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let detail = errorJson["detail"] as? String {
+                        print("❌ [ImageGenerationService] fal.ai API error: \(detail)")
+                        completion(.failure(ServiceError.apiError(detail)))
+                    } else {
+                        completion(.failure(ServiceError.apiError("HTTP \(httpResponse.statusCode)")))
+                    }
                 }
                 return
             }
@@ -467,12 +669,26 @@ final class ImageGenerationService {
 
                 // Handle HTTP errors
                 guard (200...299).contains(httpResponse.statusCode) else {
+                    // Check specifically for 429 (rate limit)
+                    if httpResponse.statusCode == 429 {
+                        print("⚠️ [ImageGenerationService] HTTP 429 - Rate limit exceeded")
+                        completion(.failure(ServiceError.rateLimitExceeded))
+                        return
+                    }
+
                     if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let error = errorResponse["error"] as? [String: Any],
                        let message = error["message"] as? String {
 
-                        print("❌ [ImageGenerationService] API error: \(message)")
-                        completion(.failure(ServiceError.apiError(message)))
+                        print("❌ [ImageGenerationService] API error (HTTP \(httpResponse.statusCode)): \(message)")
+
+                        // Check for quota/rate limit errors in the message
+                        let lowercased = message.lowercased()
+                        if lowercased.contains("quota") || lowercased.contains("rate limit") || lowercased.contains("resource_exhausted") {
+                            completion(.failure(ServiceError.rateLimitExceeded))
+                        } else {
+                            completion(.failure(ServiceError.apiError(message)))
+                        }
                     } else {
                         completion(.failure(ServiceError.apiError("HTTP \(httpResponse.statusCode)")))
                     }

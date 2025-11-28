@@ -225,20 +225,6 @@ public final class AnalyticsManager {
         track(eventName: "\(funnel)_dropout", properties: properties)
     }
 
-    // MARK: - Screen Tracking
-
-    /// Track when a screen is viewed
-    public func trackScreenView(screenName: String, properties: [String: Any]? = nil) {
-        var props = properties ?? [:]
-        props["screen_name"] = screenName
-
-        #if DEBUG
-        print("[Analytics] Screen viewed: \(screenName)")
-        #endif
-
-        track(eventName: "screen_viewed", properties: props)
-    }
-
     // MARK: - User Properties
 
     /// Set user profile properties (super properties in Mixpanel)

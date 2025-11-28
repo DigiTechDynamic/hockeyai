@@ -71,18 +71,15 @@ struct ProfileView: View {
             Button("Take Photo") {
                 viewModel.mediaSourceType = .camera
                 viewModel.showingCustomCamera = true
-                ProfileAnalytics.shared.trackProfilePhotoSourceSelected(source: "camera")
             }
             Button("Choose from Library") {
                 viewModel.mediaSourceType = .photoLibrary
                 viewModel.showingMediaPicker = true
-                ProfileAnalytics.shared.trackProfilePhotoSourceSelected(source: "library")
             }
             if viewModel.profileImage != nil {
                 Button("Remove Photo", role: .destructive) {
                     viewModel.profileImage = nil
                     ProfileImageService.shared.removeImage()
-                    ProfileAnalytics.shared.trackProfilePhotoRemoved()
                 }
             }
             Button("Cancel", role: .cancel) { }
@@ -565,7 +562,6 @@ struct ProfileView: View {
     private func editableAttributeRow(title: String, icon: String, value: String, action: @escaping () -> Void) -> some View {
         Button(action: {
             HapticManager.shared.playSelection()
-            ProfileAnalytics.shared.trackPopupOpened(popup: title.lowercased())
             action()
         }) {
             HStack {
@@ -590,7 +586,6 @@ struct ProfileView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .trackScreen("profile")
     }
 }
 

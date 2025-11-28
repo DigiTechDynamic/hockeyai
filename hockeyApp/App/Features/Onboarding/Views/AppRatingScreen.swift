@@ -141,6 +141,5 @@ struct AppRatingScreen: View {
 
             withAnimation { animateIn = true }
         }
-        .trackScreen("onboarding_rating")
     }
 }

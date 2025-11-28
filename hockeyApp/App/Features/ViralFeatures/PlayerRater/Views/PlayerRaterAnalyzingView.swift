@@ -155,7 +155,6 @@ struct PlayerRaterAnalyzingView: View {
             }
             Button("Keep Running", role: .cancel) {}
         }
-        .trackScreen("sty_check_analyzing")
     }
 
     private func startAnimations() {

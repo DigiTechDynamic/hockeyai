@@ -192,7 +192,6 @@ struct StickDetailsInputView: View {
             }
         }
         .background(theme.background)
-        .trackScreen("stick_analyzer_input")
     }
     
     private func proceedToNext() {

@@ -300,6 +300,5 @@ private struct PermissionPromptCard: View {
                         .stroke(lineWidth: 1)
                 )
         )
-        .trackScreen("onboarding_notifications")
     }
 }

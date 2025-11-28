@@ -62,7 +62,6 @@ struct EquipmentView: View {
                 }
             })
         }
-        .trackScreen("equipment")
 
     }
     

@@ -36,7 +36,6 @@ struct ContentView: View {
 
             // Notifications work but don't deep link - user can tap Results button
         }
-        .screenTrackingDebug() // Add debug overlay for screen tracking
     }
 }
 

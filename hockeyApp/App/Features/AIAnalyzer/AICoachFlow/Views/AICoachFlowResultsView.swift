@@ -46,7 +46,6 @@ struct AICoachFlowResultsView: View {
                 }
             }
         }
-        .trackScreen("ai_coach_results")
     }
 
     // MARK: - Unified Analysis Card

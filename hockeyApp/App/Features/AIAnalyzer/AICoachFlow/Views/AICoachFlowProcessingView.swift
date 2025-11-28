@@ -164,7 +164,6 @@ struct AICoachFlowProcessingView: View {
         .onDisappear {
             stopHaptics()
         }
-        .trackScreen("ai_coach_processing")
     }
 
     // Network checks removed

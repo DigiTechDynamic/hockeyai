@@ -167,6 +167,5 @@ struct GreenyWelcomeScreen: View {
             // Gentle success vibe on appear to set tone
             HapticManager.shared.playNotification(type: .success)
         }
-        .trackScreen("onboarding_welcome")
     }
 }

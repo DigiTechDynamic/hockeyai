@@ -170,7 +170,6 @@ struct StickProcessingView: View {
                 phaseDetail = "Applying recommendations..."
             }
         }
-        .trackScreen("stick_analyzer_processing")
     }
 
     private func startAnimation() {

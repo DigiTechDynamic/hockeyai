@@ -80,7 +80,6 @@ struct ShotRaterCaptureView: View {
             showInstructions = false
             showUploadCard = false
         }
-        .trackScreen("shot_rater_capture")
     }
     
     // MARK: - Combined Demo Section

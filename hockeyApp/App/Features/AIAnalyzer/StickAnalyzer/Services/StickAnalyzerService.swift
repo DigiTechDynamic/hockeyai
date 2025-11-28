@@ -83,22 +83,6 @@ class StickAnalyzerService {
         // Show a brief cellular notice overlay before heavy analysis (non-blocking)
         AINetworkPreflight.showCellularNoticeIfNeeded()
 
-        // Extract metadata from video
-        let videoMetadata = try await extractVideoMetadata(from: shotVideoURL)
-
-        // Calculate video size in KB
-        let fileSize = try? FileManager.default.attributesOfItem(atPath: shotVideoURL.path)[.size] as? Int64 ?? 0
-        let videoSizeKB = Int((fileSize ?? 0) / 1024)
-
-        // Track analysis started
-        let provider = "gemini"
-        AIPerformanceAnalytics.trackAnalysisStarted(
-            feature: .stickAnalyzer,
-            provider: provider,
-            imageSizeKB: videoSizeKB,
-            context: "stick_recommendation"
-        )
-
         // Create analysis prompt
         let prompt = createAnalysisPrompt(
             playerProfile: playerProfile,
@@ -144,20 +128,6 @@ class StickAnalyzerService {
                             processingTime: Date().timeIntervalSince(startTime)
                         )
 
-                        // Track successful analysis
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisCompleted(
-                            feature: .stickAnalyzer,
-                            provider: provider,
-                            durationSeconds: duration,
-                            tokensUsed: nil,
-                            responseValid: true,
-                            containsPerson: nil,
-                            scoreGenerated: nil,  // Stick analyzer doesn't generate scores
-                            hasPremiumData: !stickResponse.recommended_sticks.isEmpty,
-                            imageSizeKB: videoSizeKB
-                        )
-
                         continuation.resume(returning: analysisResult)
 
                     } catch let parseError {
@@ -167,37 +137,12 @@ class StickAnalyzerService {
                         print("💥 Error: \(parseError.localizedDescription)")
                         #endif
 
-                        // Track parsing failure
-                        let duration = Date().timeIntervalSince(startTime)
-                        AIPerformanceAnalytics.trackAnalysisFailed(
-                            feature: .stickAnalyzer,
-                            provider: provider,
-                            errorType: .parsingError,
-                            errorMessage: parseError.localizedDescription,
-                            durationBeforeFailure: duration,
-                            retryCount: 0,
-                            imageSizeKB: videoSizeKB
-                        )
-
                         continuation.resume(throwing: AIAnalyzerError.analysisParsingFailed(
                             "Analysis completed but results couldn't be processed. Please try again."
                         ))
                     }
 
                 case .failure(let error):
-                    // Track analysis failure
-                    let duration = Date().timeIntervalSince(startTime)
-                    let errorType = AIPerformanceAnalytics.categorizeError(error)
-                    AIPerformanceAnalytics.trackAnalysisFailed(
-                        feature: .stickAnalyzer,
-                        provider: provider,
-                        errorType: errorType,
-                        errorMessage: error.localizedDescription,
-                        durationBeforeFailure: duration,
-                        retryCount: 0,
-                        imageSizeKB: videoSizeKB
-                    )
-
                     continuation.resume(throwing: AIAnalyzerError.from(error))
                 }
             }

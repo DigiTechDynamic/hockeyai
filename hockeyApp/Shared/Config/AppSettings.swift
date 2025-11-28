@@ -28,11 +28,6 @@ struct AppSettings {
     // MARK: - Analytics
     struct Analytics {
         static let enabled = true
-        static let debugMode = false
-        /// When true, every screen view also emits an event named after the screen
-        /// (e.g., `ai_coach_flow`) in addition to the generic `screen_viewed` event.
-        /// This makes it easier to build funnels by event name in Mixpanel.
-        static let emitNamedScreenEvents = true
     }
     
     // MARK: - Hockey Settings

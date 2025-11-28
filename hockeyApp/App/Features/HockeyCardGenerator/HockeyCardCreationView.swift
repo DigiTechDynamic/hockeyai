@@ -12,6 +12,7 @@ struct HockeyCardCreationView: View {
     @State private var showingHistory = false
     @State private var showingPaywall = false
     @State private var showingDailyLimitAlert = false
+    @State private var isKeyboardVisible = false
 
     var body: some View {
         ZStack {
@@ -55,10 +56,14 @@ struct HockeyCardCreationView: View {
                     .padding(.top, 16)
                 }
                 .scrollIndicators(.hidden)
+                .onTapGesture {
+                    // Dismiss keyboard when tapping outside text fields
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
             }
 
-            // Sticky Bottom CTA - ALWAYS visible when photo is uploaded
-            if !viewModel.playerPhotos.isEmpty {
+            // Sticky Bottom CTA - visible when photo is uploaded and keyboard is hidden
+            if !viewModel.playerPhotos.isEmpty && !isKeyboardVisible {
                 VStack {
                     Spacer()
                     stickyBottomCTA
@@ -92,6 +97,21 @@ struct HockeyCardCreationView: View {
         .onAppear {
             // Track funnel start (Step 1)
             HockeyCardAnalytics.trackStarted(source: "hockey_card_home")
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .fontWeight(.semibold)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isKeyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isKeyboardVisible = false
         }
     }
 
@@ -462,6 +482,10 @@ struct HockeyCardCreationView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.white)
                 .keyboardType(keyboardType)
+                .submitLabel(.done)
+                .onSubmit {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
@@ -703,17 +727,20 @@ struct HockeyCardCreationView: View {
 
     // MARK: - Sticky Bottom CTA
     private var stickyBottomCTA: some View {
-        VStack(spacing: 0) {
-            // Validation hints (if incomplete)
+        VStack(spacing: 8) {
+            // Simple validation message (if incomplete)
             if !viewModel.isFormComplete {
-                validationHints
-                    .padding(.bottom, 12)
+                Text(viewModel.nextRequiredField)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(theme.textSecondary)
             }
 
             Button(action: {
                 HapticManager.shared.playSelection()
 
                 if MonetizationManager.shared.canGenerateHockeyCard() {
+                    // Save player info for next time
+                    viewModel.savePlayerInfo()
                     showingCardGeneration = true
                 } else {
                     if MonetizationManager.shared.isPremium {
@@ -754,40 +781,6 @@ struct HockeyCardCreationView: View {
             )
             .ignoresSafeArea()
         )
-    }
-
-    private var validationHints: some View {
-        HStack(spacing: 16) {
-            if viewModel.selectedPhotoType == nil {
-                hintChip(text: "Select photo type")
-            }
-            if viewModel.playerName.isEmpty {
-                hintChip(text: "Add name")
-            }
-            if viewModel.jerseyNumber.isEmpty {
-                hintChip(text: "Add number")
-            }
-            if viewModel.position == nil {
-                hintChip(text: "Select position")
-            }
-            if !viewModel.isJerseySelectionComplete {
-                hintChip(text: "Select team")
-            }
-        }
-    }
-
-    private func hintChip(text: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .font(.system(size: 10))
-            Text(text)
-                .font(.system(size: 11, weight: .medium))
-        }
-        .foregroundColor(theme.accent)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(theme.accent.opacity(0.15))
-        .cornerRadius(8)
     }
 }
 
@@ -845,6 +838,26 @@ class HockeyCardCreationViewModel: ObservableObject {
 
     var isFormComplete: Bool {
         isPlayerInfoComplete && isJerseySelectionComplete
+    }
+
+    /// Returns a friendly message about what's needed next
+    var nextRequiredField: String {
+        if selectedPhotoType == nil {
+            return "Select a photo type above"
+        }
+        if playerName.isEmpty {
+            return "Enter player name"
+        }
+        if jerseyNumber.isEmpty {
+            return "Enter jersey number"
+        }
+        if position == nil {
+            return "Select a position"
+        }
+        if !isJerseySelectionComplete {
+            return "Select a team"
+        }
+        return ""
     }
 
     // Check if "Use Photo" option should be shown based on selected photo type
@@ -947,5 +960,27 @@ class HockeyCardCreationViewModel: ObservableObject {
         guard index < playerPhotos.count else { return }
         playerPhotos.remove(at: index)
         selectedPhotoType = nil  // Reset photo type when photo is removed
+    }
+
+    /// Save player info for next time
+    func savePlayerInfo() {
+        // Load existing profile or create new one
+        var profile: PlayerProfile
+        if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
+           let existingProfile = try? JSONDecoder().decode(PlayerProfile.self, from: profileData) {
+            profile = existingProfile
+        } else {
+            profile = PlayerProfile()
+        }
+
+        // Update with current values
+        profile.name = playerName
+        profile.jerseyNumber = jerseyNumber
+        profile.position = position
+
+        // Save back
+        if let encoded = try? JSONEncoder().encode(profile) {
+            UserDefaults.standard.set(encoded, forKey: "playerProfile")
+        }
     }
 }

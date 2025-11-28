@@ -60,14 +60,15 @@ struct PlayerProfileStageView: View {
 
     // (removed dynamic height equalization; using fixed height for reliability)
 
-    // Helper method to check if profile exists
+    // Helper method to check if profile has all required fields for analysis
     private func hasExistingProfile() -> Bool {
         if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
            let profile = try? JSONDecoder().decode(PlayerProfile.self, from: profileData) {
-            // Check if profile has at least some basic data
-            return profile.height != nil || profile.weight != nil ||
-                   profile.position != nil || profile.handedness != nil ||
-                   profile.playStyle != nil
+            // Check if profile has ALL required fields (height, weight, age)
+            let hasHeight = profile.height != nil && profile.height! > 0
+            let hasWeight = profile.weight != nil && profile.weight! > 0
+            let hasAge = profile.age != nil && profile.age! > 0
+            return hasHeight && hasWeight && hasAge
         }
         return false
     }
@@ -686,6 +687,5 @@ struct PlayerProfileStageView: View {
                 .opacity(0.95)
                 .ignoresSafeArea()
         )
-        .trackScreen("ai_coach_profile")
     }
 }
