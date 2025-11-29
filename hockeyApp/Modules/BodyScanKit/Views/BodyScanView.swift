@@ -21,7 +21,7 @@ struct BodyScanView: View {
     @State private var onboardingPage = 0
     @State private var isAudioEnabled = true
     @State private var isPlayingTest = false
-    private let totalOnboardingPages = 4
+    private let totalOnboardingPages = 3  // Simplified: How to Stand, Background, Volume
 
     var body: some View {
         ZStack {
@@ -97,123 +97,175 @@ struct BodyScanView: View {
 
     // MARK: - Hero Screen (Page 0)
     private var heroScreen: some View {
-        VStack(spacing: 0) {
-            // Close button
-            HStack {
-                Spacer()
-                Button(action: { onCancel() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
-                        .frame(width: 36, height: 36)
-                        .background(Color.white.opacity(0.9))
-                        .clipShape(Circle())
-                }
-                .padding(.trailing, 20)
-                .padding(.top, 16)
-            }
-
-            Spacer()
-
-            // Title
-            VStack(spacing: 16) {
-                Text("Deep Dive Into\nYour Body")
-                    .font(.system(size: 36, weight: .bold))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.black)
-
-                Text("Get accurate measurements for the\nperfect stick recommendation.")
-                    .font(.system(size: 17))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.gray)
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
-
-            // 3D Body Placeholder
-            ZStack {
-                // Gradient background
-                LinearGradient(
-                    colors: [Color.gray.opacity(0.1), Color.gray.opacity(0.05)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 400)
-
-                // Body silhouette placeholder
-                VStack(spacing: 0) {
-                    Image(systemName: "figure.stand")
-                        .font(.system(size: 180, weight: .ultraLight))
-                        .foregroundColor(.black.opacity(0.7))
-
-                    // Scanning rings effect
-                    ForEach(0..<3, id: \.self) { index in
-                        Ellipse()
-                            .stroke(theme.primary.opacity(0.6 - Double(index) * 0.2), lineWidth: 2)
-                            .frame(width: 120 + CGFloat(index * 40), height: 30 + CGFloat(index * 10))
-                            .offset(y: -80 - CGFloat(index * 40))
-                    }
-                }
-            }
-
-            Spacer()
-
-            // CTA Button
-            Button(action: {
-                withAnimation { onboardingPage = 1 }
-            }) {
-                Text("Scan Your Body")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.white)
-                    .cornerRadius(16)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
-        }
-        .background(
+        ZStack {
+            // Dark gradient background
             LinearGradient(
-                colors: [Color(white: 0.95), Color(white: 0.9)],
+                colors: [
+                    Color(red: 0.08, green: 0.08, blue: 0.10),
+                    Color(red: 0.05, green: 0.05, blue: 0.07),
+                    Color.black
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
-        )
+
+            // Subtle radial glow behind mannequin
+            RadialGradient(
+                colors: [
+                    theme.primary.opacity(0.15),
+                    theme.primary.opacity(0.05),
+                    Color.clear
+                ],
+                center: .center,
+                startRadius: 50,
+                endRadius: 350
+            )
+            .offset(y: 50)
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Top bar with close button
+                HStack {
+                    Spacer()
+                    Button(action: { onCancel() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.top, 16)
+                }
+
+                // Title section with glow effect
+                VStack(spacing: 12) {
+                    Text("Deep Dive Into")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.white)
+                    + Text("\nYour Body")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text("Get accurate measurements for the\nperfect stick recommendation.")
+                        .font(.system(size: 16, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.top, 4)
+                }
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+
+                Spacer()
+
+                // 3D Body Mannequin Image
+                ZStack {
+                    // The generated 3D mannequin image
+                    Image("body_scan_hero")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxHeight: 450)
+
+                    // Animated scanning line overlay
+                    AnimatedScanLine(color: theme.primary)
+                        .frame(maxHeight: 450)
+                        .mask(
+                            Image("body_scan_hero")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        )
+                }
+                .padding(.horizontal, 20)
+
+                Spacer()
+
+                // CTA Button with premium styling
+                Button(action: {
+                    HapticManager.shared.playImpact(style: .medium)
+                    withAnimation { onboardingPage = 1 }
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "viewfinder")
+                            .font(.system(size: 18, weight: .semibold))
+
+                        Text("Scan Your Body")
+                            .font(.system(size: 17, weight: .bold))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 58)
+                    .background(
+                        ZStack {
+                            // Primary fill
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(theme.primary)
+
+                            // Inner highlight
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white.opacity(0.25),
+                                            Color.clear
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .center
+                                    )
+                                )
+                        }
+                    )
+                    .shadow(color: theme.primary.opacity(0.5), radius: 20, y: 8)
+                    .shadow(color: theme.primary.opacity(0.3), radius: 40, y: 16)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+
+                // Subtle footer text
+                Text("Powered by AI body analysis")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.3))
+                    .padding(.bottom, 32)
+            }
+        }
     }
 
-    // MARK: - Tutorial Flow (Pages 1-4)
+    // MARK: - Tutorial Flow (Pages 1-3)
     private var tutorialFlow: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
+            // Header - centered title with close button
+            ZStack {
                 Text("How It Works")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
 
-                Spacer()
-
-                Button(action: { onCancel() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
+                HStack {
+                    Spacer()
+                    Button(action: { onCancel() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .background(Color.white.opacity(0.15))
+                            .clipShape(Circle())
+                    }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
-            .padding(.bottom, 24)
+            .padding(.bottom, 16)
 
             // Page Content
             TabView(selection: $onboardingPage) {
                 howToStandPage.tag(1)
-                phoneSetupPage.tag(2)
-                tipsPage.tag(3)
-                volumePage.tag(4)
+                backgroundPage.tag(2)
+                volumePage.tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -230,6 +282,7 @@ struct BodyScanView: View {
 
             // Next Button
             Button(action: {
+                HapticManager.shared.playImpact(style: .light)
                 if onboardingPage < totalOnboardingPages {
                     withAnimation { onboardingPage += 1 }
                 } else {
@@ -244,7 +297,7 @@ struct BodyScanView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
                     .background(Color.white)
-                    .cornerRadius(16)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
@@ -254,270 +307,203 @@ struct BodyScanView: View {
 
     // MARK: - Tutorial Page 1: How to Stand
     private var howToStandPage: some View {
-        VStack(spacing: 24) {
-            // Image placeholder with annotations
+        VStack(spacing: 0) {
+            // Image with annotation overlays - centered
             ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.1))
-                    .frame(height: 380)
+                // Photorealistic pose image
+                Image("body_scan_pose")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                // Body pose placeholder with annotations
-                ZStack {
-                    // Person silhouette
-                    Image(systemName: "figure.arms.open")
-                        .font(.system(size: 160, weight: .thin))
-                        .foregroundColor(.white.opacity(0.8))
-
-                    // Annotation: Look straight ahead
-                    annotationBubble(
+                // Annotation overlays
+                GeometryReader { geo in
+                    // Look straight ahead - top left
+                    PoseAnnotation(
                         text: "Look straight\nahead",
-                        alignment: .leading
+                        dotPosition: CGPoint(x: geo.size.width * 0.50, y: geo.size.height * 0.10),
+                        labelPosition: CGPoint(x: geo.size.width * 0.18, y: geo.size.height * 0.10),
+                        alignment: .leading,
+                        color: theme.primary
                     )
-                    .offset(x: -80, y: -120)
 
-                    // Annotation: Spread arms
-                    annotationBubble(
+                    // Spread arms - right side
+                    PoseAnnotation(
                         text: "Spread your\narms in A pose",
-                        alignment: .trailing
+                        dotPosition: CGPoint(x: geo.size.width * 0.88, y: geo.size.height * 0.38),
+                        labelPosition: CGPoint(x: geo.size.width * 0.78, y: geo.size.height * 0.45),
+                        alignment: .trailing,
+                        color: theme.primary
                     )
-                    .offset(x: 90, y: -20)
 
-                    // Annotation: Feet distance
-                    annotationBubble(
+                    // Keep distance with feet - bottom left
+                    PoseAnnotation(
                         text: "Keep a distance\nwith your feet",
-                        alignment: .leading
+                        dotPosition: CGPoint(x: geo.size.width * 0.38, y: geo.size.height * 0.92),
+                        labelPosition: CGPoint(x: geo.size.width * 0.18, y: geo.size.height * 0.82),
+                        alignment: .leading,
+                        color: theme.primary
                     )
-                    .offset(x: -80, y: 100)
                 }
             }
-            .padding(.horizontal, 20)
+            .frame(maxHeight: 500)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+
+            Spacer().frame(height: 20)
 
             // Title and description
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Text("How to Stand")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundColor(.white)
 
                 Text("Keep hands and feet within the frame")
                     .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.white.opacity(0.6))
             }
 
             Spacer()
         }
     }
 
-    // MARK: - Tutorial Page 2: Phone Setup
-    private var phoneSetupPage: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.1))
-                    .frame(height: 380)
+    // MARK: - Tutorial Page 2: Background
+    private var backgroundPage: some View {
+        VStack(spacing: 0) {
+            // Phone outline at top connecting to images
+            PhoneOutlineConnector()
+                .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                .frame(height: 50)
+                .padding(.horizontal, 80)
 
-                VStack(spacing: 20) {
-                    // Phone on surface icon
-                    Image(systemName: "iphone.gen3.radiowaves.left.and.right")
-                        .font(.system(size: 80))
-                        .foregroundColor(theme.primary)
+            // Side by side comparison
+            HStack(spacing: 12) {
+                // Good background
+                BackgroundComparisonCard(
+                    imageName: "body_scan_bg_good",
+                    isGood: true,
+                    accentColor: theme.primary
+                )
 
-                    // Distance indicator
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.left.and.right")
-                            .font(.system(size: 24))
-                        Text("6-8 feet")
-                            .font(.system(size: 20, weight: .semibold))
-                    }
-                    .foregroundColor(.white.opacity(0.8))
-                }
+                // Bad background
+                BackgroundComparisonCard(
+                    imageName: "body_scan_bg_bad",
+                    isGood: false,
+                    accentColor: theme.primary
+                )
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 24)
 
-            VStack(spacing: 12) {
-                Text("Set Up Your Phone")
-                    .font(.system(size: 24, weight: .bold))
+            Spacer().frame(height: 24)
+
+            // Title and description
+            VStack(spacing: 10) {
+                Text("Background")
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundColor(.white)
 
-                Text("Place your phone on a stable surface,\n6-8 feet away at chest height")
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                Text("Choose a plain, uncluttered background like a neutral-colored wall or a solid backdrop. Avoid busy patterns or objects that might interfere with the analysis.")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
+                    .lineSpacing(3)
             }
+            .padding(.horizontal, 28)
 
             Spacer()
         }
     }
 
-    // MARK: - Tutorial Page 3: Tips
-    private var tipsPage: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.1))
-                    .frame(height: 380)
-
-                VStack(spacing: 30) {
-                    tipRow(icon: "lightbulb.fill", text: "Good lighting helps accuracy")
-                    tipRow(icon: "tshirt.fill", text: "Fitted clothing works best")
-                    tipRow(icon: "figure.stand", text: "Stand on a flat surface")
-                    tipRow(icon: "clock.fill", text: "Hold still for 4 seconds")
-                }
-                .padding(.horizontal, 30)
-            }
-            .padding(.horizontal, 20)
-
-            VStack(spacing: 12) {
-                Text("Tips for Best Results")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-
-                Text("Follow these tips for accurate measurements")
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-
-            Spacer()
-        }
-    }
-
-    // MARK: - Tutorial Page 4: Volume
+    // MARK: - Tutorial Page 3: Volume
     private var volumePage: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
+            Spacer()
+
+            // Speaker icon card
             ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.1))
-                    .frame(height: 380)
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    .frame(height: 200)
 
-                VStack(spacing: 32) {
-                    // Animated speaker icon
-                    ZStack {
-                        // Glow effect when playing
-                        if isPlayingTest {
-                            Circle()
-                                .fill(theme.primary.opacity(0.3))
-                                .frame(width: 140, height: 140)
-                                .blur(radius: 20)
-                        }
+                Image(systemName: isAudioEnabled ? "speaker.wave.3.fill" : "speaker.slash.fill")
+                    .font(.system(size: 64, weight: .medium))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [theme.primary, theme.primary.opacity(0.7)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .opacity(isAudioEnabled ? 1.0 : 0.5)
+            }
+            .padding(.horizontal, 60)
 
-                        Image(systemName: isAudioEnabled ? "speaker.wave.3.fill" : "speaker.slash.fill")
-                            .font(.system(size: 70))
-                            .foregroundColor(isAudioEnabled ? theme.primary : .gray)
-                            .symbolEffect(.variableColor.iterative, isActive: isPlayingTest)
+            Spacer().frame(height: 32)
+
+            // Buttons
+            VStack(spacing: 12) {
+                // Test Volume button
+                Button(action: {
+                    HapticManager.shared.playImpact(style: .light)
+                    audioGuide.speak("Can you hear me?", force: true)
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Test Volume")
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                    .frame(height: 100)
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(theme.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
 
-                    // Test Sound Button
-                    Button(action: {
-                        playTestSound()
-                    }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: isPlayingTest ? "speaker.wave.2.fill" : "play.fill")
-                                .font(.system(size: 16, weight: .semibold))
-
-                            Text(isPlayingTest ? "Playing..." : "Test Sound")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(isAudioEnabled ? .black : .gray)
-                        .frame(width: 160, height: 50)
-                        .background(isAudioEnabled ? theme.primary : Color.white.opacity(0.2))
-                        .cornerRadius(25)
+                // Mute toggle button
+                Button(action: {
+                    HapticManager.shared.playImpact(style: .light)
+                    isAudioEnabled.toggle()
+                    if !isAudioEnabled {
+                        audioGuide.stop()
                     }
-                    .disabled(!isAudioEnabled || isPlayingTest)
-
-                    // Audio Toggle
-                    Button(action: {
-                        isAudioEnabled.toggle()
-                        if !isAudioEnabled {
-                            audioGuide.stop()
-                            isPlayingTest = false
-                        }
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: isAudioEnabled ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 22))
-                                .foregroundColor(isAudioEnabled ? theme.primary : .white.opacity(0.5))
-
-                            Text("Audio Guidance")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.white)
-
-                            Spacer()
-
-                            Text(isAudioEnabled ? "On" : "Off")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(isAudioEnabled ? theme.primary : .white.opacity(0.5))
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(12)
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: isAudioEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(isAudioEnabled ? "Mute Audio" : "Unmute Audio")
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                    .padding(.horizontal, 20)
+                    .foregroundColor(isAudioEnabled ? .white : theme.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(isAudioEnabled ? Color.white.opacity(0.1) : theme.primary.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(isAudioEnabled ? Color.white.opacity(0.2) : theme.primary.opacity(0.3), lineWidth: 1)
+                    )
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 40)
 
+            Spacer().frame(height: 32)
+
+            // Title and description
             VStack(spacing: 12) {
                 Text("Audio Settings")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundColor(.white)
 
                 Text(isAudioEnabled
-                     ? "Tap 'Test Sound' to check your volume.\nYou'll hear voice guidance during the scan."
-                     : "Audio guidance is disabled.\nYou can still complete the scan visually.")
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                    ? "Voice guidance will help you\nduring the body scan."
+                    : "Audio is muted. You can still\ncomplete the scan visually.")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
+                    .lineSpacing(4)
             }
-
-            Spacer()
-        }
-    }
-
-    private func playTestSound() {
-        guard isAudioEnabled else { return }
-        isPlayingTest = true
-        audioGuide.speak("Volume check. Can you hear me? If so, you're all set!", force: true)
-
-        // Reset after speech completes (approximate duration)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-            isPlayingTest = false
-        }
-    }
-
-    // MARK: - Helper Views
-    private func annotationBubble(text: String, alignment: HorizontalAlignment) -> some View {
-        HStack(spacing: 6) {
-            if alignment == .trailing {
-                Spacer(minLength: 0)
-            }
-
-            Circle()
-                .fill(theme.primary)
-                .frame(width: 8, height: 8)
-
-            Text(text)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white)
-                .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
-
-            if alignment == .leading {
-                Spacer(minLength: 0)
-            }
-        }
-        .frame(width: 120)
-    }
-
-    private func tipRow(icon: String, text: String) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundColor(theme.primary)
-                .frame(width: 32)
-
-            Text(text)
-                .font(.system(size: 16))
-                .foregroundColor(.white)
+            .padding(.horizontal, 24)
 
             Spacer()
         }
@@ -1489,3 +1475,163 @@ final class CameraSessionManager: NSObject {
         }
     }
 }
+
+// MARK: - Background Comparison Card
+struct BackgroundComparisonCard: View {
+    let imageName: String
+    let isGood: Bool
+    let accentColor: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .bottomTrailing) {
+                // Image
+                Image(imageName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                // Badge
+                Circle()
+                    .fill(isGood ? accentColor : Color.red)
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: isGood ? "checkmark" : "xmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(isGood ? .black : .white)
+                    )
+                    .padding(12)
+            }
+        }
+        .frame(height: 300)
+    }
+}
+
+// MARK: - Pose Annotation (Tutorial Overlay)
+struct PoseAnnotation: View {
+    let text: String
+    let dotPosition: CGPoint
+    let labelPosition: CGPoint
+    let alignment: HorizontalAlignment
+    let color: Color
+
+    var body: some View {
+        ZStack {
+            // Curved line connecting dot to label
+            Path { path in
+                path.move(to: dotPosition)
+
+                // Create curved bezier to label
+                let midX = (dotPosition.x + labelPosition.x) / 2
+                let controlY = min(dotPosition.y, labelPosition.y) - 20
+
+                path.addQuadCurve(
+                    to: CGPoint(x: labelPosition.x + (alignment == .leading ? 0 : 60), y: labelPosition.y + 10),
+                    control: CGPoint(x: midX, y: controlY)
+                )
+            }
+            .stroke(color, lineWidth: 2)
+
+            // Dot at body part
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+                .position(dotPosition)
+
+            // Label
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white)
+                .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
+                .position(labelPosition)
+        }
+    }
+}
+
+// MARK: - Phone Outline Connector (Background Page)
+struct PhoneOutlineConnector: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        let phoneWidth: CGFloat = 80
+        let phoneHeight: CGFloat = 50
+        let cornerRadius: CGFloat = 8
+
+        // Phone outline at top center
+        let phoneRect = CGRect(
+            x: rect.midX - phoneWidth / 2,
+            y: 0,
+            width: phoneWidth,
+            height: phoneHeight
+        )
+
+        // Rounded phone body
+        path.addRoundedRect(in: phoneRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
+
+        // Lines going down to corners
+        let lineStartY = phoneHeight
+        let lineEndY = rect.height
+
+        // Left line
+        path.move(to: CGPoint(x: phoneRect.minX + 10, y: lineStartY))
+        path.addLine(to: CGPoint(x: rect.minX + 20, y: lineEndY))
+
+        // Right line
+        path.move(to: CGPoint(x: phoneRect.maxX - 10, y: lineStartY))
+        path.addLine(to: CGPoint(x: rect.maxX - 20, y: lineEndY))
+
+        return path
+    }
+}
+
+// MARK: - Animated Scan Line (Hero Screen Effect)
+struct AnimatedScanLine: View {
+    let color: Color
+    @State private var offset: CGFloat = -1.0
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                // Scanning line with glow
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                color.opacity(0.3),
+                                color.opacity(0.8),
+                                color,
+                                color.opacity(0.8),
+                                color.opacity(0.3),
+                                Color.clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(height: 60)
+                    .blur(radius: 8)
+                    .offset(y: offset * geo.size.height)
+
+                // Sharp center line
+                Rectangle()
+                    .fill(color)
+                    .frame(height: 2)
+                    .shadow(color: color, radius: 6)
+                    .shadow(color: color.opacity(0.8), radius: 12)
+                    .offset(y: offset * geo.size.height)
+            }
+        }
+        .onAppear {
+            withAnimation(
+                .easeInOut(duration: 2.5)
+                .repeatForever(autoreverses: true)
+            ) {
+                offset = 1.0
+            }
+        }
+    }
+}
+

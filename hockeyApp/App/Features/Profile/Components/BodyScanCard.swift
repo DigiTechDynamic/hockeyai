@@ -41,44 +41,9 @@ struct BodyScanCard: View {
 
     // MARK: - Empty State Card
     private var emptyStateCard: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "figure.stand")
-                .font(.system(size: 50))
-                .foregroundColor(theme.primary)
-
-            Text("Body Scan")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(theme.text)
-
-            Text("Capture your body proportions for better stick recommendations")
-                .font(.system(size: 14))
-                .foregroundColor(theme.textSecondary)
-                .multilineTextAlignment(.center)
-
-            // Start button inside card
-            Button(action: {
-                HapticManager.shared.playSelection()
-                showBodyScan = true
-            }) {
-                HStack {
-                    Image(systemName: "figure.stand")
-                    Text("Start Body Scan")
-                }
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(theme.primary)
-                .cornerRadius(theme.cornerRadius)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.top, 8)
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: theme.cornerRadius)
-                .fill(theme.surface)
-        )
+        BodyScanEmptyCard(onStartScan: {
+            showBodyScan = true
+        })
     }
 
     // MARK: - Completed State Card
@@ -161,20 +126,6 @@ struct BodyScanCard: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-        }
-    }
-
-    // MARK: - Helper Views
-    private func instructionRow(icon: String, text: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(theme.primary)
-                .frame(width: 24)
-            Text(text)
-                .font(.system(size: 14))
-                .foregroundColor(theme.textSecondary)
-            Spacer()
         }
     }
 

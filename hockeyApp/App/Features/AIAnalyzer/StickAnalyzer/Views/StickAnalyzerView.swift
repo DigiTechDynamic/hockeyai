@@ -588,52 +588,9 @@ struct BodyScanStageView: View {
 
     // MARK: - Empty State Card (with Start button inside)
     private var emptyStateCard: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "figure.stand")
-                .font(.system(size: 60))
-                .foregroundColor(theme.primary)
-
-            Text("Body Scan")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(theme.text)
-
-            Text("We'll capture a full-body photo to analyze your proportions for optimal stick fitting.")
-                .font(.system(size: 15))
-                .foregroundColor(theme.textSecondary)
-                .multilineTextAlignment(.center)
-
-            VStack(alignment: .leading, spacing: 12) {
-                instructionRow(icon: "person.fill", text: "Stand naturally with arms at your sides")
-                instructionRow(icon: "camera.fill", text: "Have someone take your photo, or use a timer")
-                instructionRow(icon: "lightbulb.fill", text: "Good lighting helps accuracy")
-                instructionRow(icon: "arrow.up.and.down", text: "Full body should be visible")
-            }
-            .padding(.top, 8)
-
-            // Start button inside card
-            Button(action: {
-                HapticManager.shared.playSelection()
-                showBodyScan = true
-            }) {
-                HStack {
-                    Image(systemName: "figure.stand")
-                    Text("Start Body Scan")
-                }
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(theme.primary)
-                .cornerRadius(theme.cornerRadius)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.top, 12)
-        }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: theme.cornerRadius)
-                .fill(theme.surface)
-        )
+        BodyScanEmptyCard(onStartScan: {
+            showBodyScan = true
+        })
         .padding(.horizontal, 20)
         .scaleEffect(showContent ? 1 : 0.9)
         .opacity(showContent ? 1 : 0)
@@ -732,19 +689,6 @@ struct BodyScanStageView: View {
     }
 
     // MARK: - Helper Views
-    private func instructionRow(icon: String, text: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(theme.primary)
-                .frame(width: 24)
-            Text(text)
-                .font(.system(size: 14))
-                .foregroundColor(theme.textSecondary)
-            Spacer()
-        }
-    }
-
     private func formattedDate(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
