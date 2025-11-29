@@ -1,34 +1,30 @@
 import SwiftUI
 
 // MARK: - Stick Analyzer Flow View
-/// Main container view for the Stick Analyzer flow - EXACTLY like AICoachFlow
+/// Main container view for the Stick Analyzer flow
+/// Uses body scan instead of video for lower friction
 struct StickAnalyzerView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.theme) var theme
     @StateObject private var flowHolder: StickAnalyzerFlowHolder
     @StateObject private var viewModel = StickAnalyzerViewModel()
-    @State private var isValidating = false
-    @State private var validationResult: AIValidationService.ValidationResponse?
-    @State private var validationError: AIAnalyzerError?
     @State private var showCards = false
     @State private var selectedCardId: String? = nil
-    @State private var validationTask: Task<Void, Never>? = nil
-    // Monetization gate state (gate before validation just like Shot Rater)
+    // Monetization gate state
     @State private var shouldActivateGate = false
     @State private var gateTriggerId = UUID().uuidString
     @State private var monetizationGranted = false
     @State private var pendingMonetizedAction: (() -> Void)?
-    @State private var interceptedValidationNav = false
-    
+    // Body scan state
+    @State private var showBodyScan = false
+
     let onAnalysisComplete: ((StickAnalysisResult) -> Void)?
 
-    // Smart progress estimator removed; using simple time-based progress
-    
     init(onAnalysisComplete: ((StickAnalysisResult) -> Void)? = nil) {
         self.onAnalysisComplete = onAnalysisComplete
         self._flowHolder = StateObject(wrappedValue: StickAnalyzerFlowHolder())
     }
-    
+
     var body: some View {
         AIFlowContainer(flow: flowHolder.flow) { flowState in
             ZStack {
@@ -46,21 +42,8 @@ struct StickAnalyzerView: View {
                                 }
                             }
 
-                    case "phone-setup-tutorial":
-                        PhoneSetupTutorialView(flowContext: .stickAnalyzer) { context in
-                            flowState.proceed()
-                        }
-                        .transition(.opacity)
-
-                    case "stick-details":
-                        StickDetailsInputView(flowState: flowState, viewModel: viewModel)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .trailing).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
-
-                    case "shot-video-capture":
-                        shotVideoView(flowState: flowState)
+                    case "body-scan":
+                        bodyScanStageView(flowState: flowState)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .trailing).combined(with: .opacity),
                                 removal: .move(edge: .leading).combined(with: .opacity)
@@ -76,44 +59,27 @@ struct StickAnalyzerView: View {
                                 ))
                         }
 
-                    case "stick-validation":
-                        SharedValidationView(
-                            isValidating: $isValidating,
-                            validationResult: $validationResult,
-                            validationError: .constant(nil),
-                            featureName: "Stick Analyzer",
-                            onSuccess: {
-                                flowState.proceed()
-                            },
-                            onRetry: {
-                                // Not used - errors go to results stage
-                            },
-                            onCancel: {
-                                // Cancel upstream AI and reset local state
-                                AIAnalysisFacade.cancelActiveRequests()
-                                validationTask?.cancel()
-                                validationTask = nil
-                                viewModel.reset()
-                                flowState.goBack()
-                            }
-                        )
-                        .transition(.opacity)
-
                     case "stick-analysis-processing":
                         processingView(flowState: flowState)
                             .transition(.opacity)
                             .onAppear {
+                                print("🔄 [StickAnalyzerView] Processing stage appeared, starting analysis in 0.5s...")
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    viewModel.performAnalysisWithoutValidation()
+                                    print("🚀 [StickAnalyzerView] Calling performAnalysis()")
+                                    viewModel.performAnalysis()
                                 }
                             }
                             .onReceive(viewModel.$analysisResult) { result in
+                                print("📡 [StickAnalyzerView] analysisResult changed: \(result != nil ? "has value" : "nil")")
                                 if result != nil {
+                                    print("✅ [StickAnalyzerView] Result received, proceeding to next stage...")
                                     flowState.proceed()
                                 }
                             }
                             .onReceive(viewModel.$error) { error in
+                                print("📡 [StickAnalyzerView] error changed: \(error != nil ? "has error" : "nil")")
                                 if error != nil {
+                                    print("⚠️ [StickAnalyzerView] Error received, proceeding to error view...")
                                     flowState.proceed()
                                 }
                             }
@@ -152,7 +118,7 @@ struct StickAnalyzerView: View {
                     }
                 }
             }
-            // Attach monetization gate here so we can trigger right before validation
+            // Attach monetization gate
             .monetizationGate(
                 featureIdentifier: "ai_analysis",
                 source: "equipment",
@@ -161,30 +127,16 @@ struct StickAnalyzerView: View {
                 consumeAccess: true,
                 onAccessGranted: {
                     monetizationGranted = true
-                    if interceptedValidationNav {
-                        interceptedValidationNav = false
-                        flowState.proceed()
-                    } else {
-                        let action = pendingMonetizedAction
-                        pendingMonetizedAction = nil
-                        action?()
-                    }
+                    let action = pendingMonetizedAction
+                    pendingMonetizedAction = nil
+                    action?()
                 },
                 onDismissOrCancel: { _ in
-                    // User closed paywall without purchasing
                     pendingMonetizedAction = nil
                     monetizationGranted = false
-                    isValidating = false
-                    validationTask?.cancel()
-                    validationTask = nil
-                    if flowState.currentStage?.id == "stick-validation" || interceptedValidationNav {
-                        flowState.goBack()
-                        interceptedValidationNav = false
-                    }
                 }
             )
             .onChange(of: flowState.currentStage?.id) { newStage in
-                handleStageChange(newStage, flowState: flowState)
                 // Track funnel progress
                 if let stageId = newStage {
                     trackFunnelProgress(for: stageId)
@@ -196,19 +148,15 @@ struct StickAnalyzerView: View {
                     funnel: "stick_analyzer",
                     step: "started",
                     stepNumber: 0,
-                    totalSteps: 7
+                    totalSteps: 6
                 )
 
-                // Track initial stage (onChange doesn't fire for initial state)
+                // Track initial stage
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     if let stageId = flowState.currentStage?.id {
                         trackFunnelProgress(for: stageId)
                     }
                 }
-            }
-            .onDisappear {
-                validationTask?.cancel()
-                validationTask = nil
             }
         }
         .overlay(
@@ -216,21 +164,37 @@ struct StickAnalyzerView: View {
                 .environmentObject(NoticeCenter.shared)
                 .zIndex(10000)
         )
+        .fullScreenCover(isPresented: $showBodyScan) {
+            bodyScanFullScreenView()
+        }
         .onAppear {
             print("🏒 [StickAnalyzerView] Flow started")
         }
         .onDisappear {
             viewModel.cleanup()
-            validationTask?.cancel()
-            validationTask = nil
         }
         // Respond to global cancel from header Cancel
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AIFlowCancel"))) { _ in
-            validationTask?.cancel()
-            validationTask = nil
             AIAnalysisFacade.cancelActiveRequests()
             dismiss()
         }
+    }
+
+    // MARK: - Body Scan Full Screen View
+    @ViewBuilder
+    private func bodyScanFullScreenView() -> some View {
+        BodyScanView(
+            onComplete: { result in
+                // Save the body scan for future use
+                BodyScanStorage.shared.save(result)
+                viewModel.setBodyScan(result)
+                showBodyScan = false
+                // Proceed will be called from the stage view
+            },
+            onCancel: {
+                showBodyScan = false
+            }
+        )
     }
 
     // MARK: - Shooting Preference Selection View
@@ -463,215 +427,13 @@ struct ShootingPreferenceSelectionView: View {
 
 // MARK: - Main Flow View Extension
 extension StickAnalyzerView {
-    // MARK: - Single Shot Video View
-    private func shotVideoView(flowState: AIFlowState) -> some View {
-        ShotVideoView(
+    // MARK: - Body Scan Stage View
+    private func bodyScanStageView(flowState: AIFlowState) -> some View {
+        BodyScanStageView(
             flowState: flowState,
             viewModel: viewModel,
-            requestMonetizedAccess: { (action: @escaping () -> Void) in
-                triggerMonetizationGate { action() }
-            }
+            showBodyScan: $showBodyScan
         )
-    }
-}
-
-// MARK: - Shot Video View
-struct ShotVideoView: View {
-    @ObservedObject var flowState: AIFlowState
-    @ObservedObject var viewModel: StickAnalyzerViewModel
-    @Environment(\.theme) var theme
-    @State private var showVideoInstructions = false
-    @State private var showVideoUpload = false
-    // Optional paywall trigger provided by parent
-    var requestMonetizedAccess: ((@escaping () -> Void) -> Void)? = nil
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Demo Image using AIExampleMediaView with Shoting_Side_Angle asset
-                    AIExampleMediaView.image(
-                        "Shoting_Side_Angle",
-                        actionTitle: "Side View",
-                        instructions: "Position camera 10-20ft to the side at chest height. Capture full body motion from setup to follow-through with clear view of stick and puck."
-                    )
-                    .padding(.horizontal, 20)
-                    .scaleEffect(showVideoInstructions ? 1 : 0.9)
-                    .opacity(showVideoInstructions ? 1 : 0)
-                    .offset(y: showVideoInstructions ? 0 : 30)
-                    .animation(
-                        .spring(response: 0.6, dampingFraction: 0.8, blendDuration: 0)
-                        .delay(0.1),
-                        value: showVideoInstructions
-                    )
-                    
-                    // Shot Upload
-                    MediaUploadView(
-                        configuration: MediaUploadView.Configuration(
-                            title: "Shot Recording",
-                            description: viewModel.shotVideoURL != nil ? "Tap to preview • Replace to re-record" : "Show us your shooting technique",
-                            instructions: "• Any shot type (wrist, slap, snap, backhand)\n• Position camera to your side\n• Show full technique\n• Include puck release\n• Good lighting helps analysis",
-                            mediaType: .video,
-                            buttonTitle: "Start Recording",
-                            showSourceSelector: true,
-                            showTrimmerImmediately: true,
-                            preCameraGuideBuilder: { onComplete in
-                                AnyView(
-                                    PhoneSetupTutorialView(flowContext: .stickAnalyzer) { _ in
-                                        onComplete()
-                                    }
-                                )
-                            },
-                            primaryColor: Color.green,
-                            backgroundColor: theme.background,
-                            surfaceColor: theme.surface,
-                            textColor: theme.text,
-                            textSecondaryColor: theme.textSecondary,
-                            successColor: theme.success,
-                            cornerRadius: theme.cornerRadius
-                        ),
-                        selectedVideoURL: Binding(
-                            get: { viewModel.shotVideoURL },
-                            set: { url in
-                                // Don't set here, let the completion handler do it
-                            }
-                        ),
-                        featureType: .stickAnalyzer
-                    ) { url in
-                        viewModel.setShotVideo(url)
-                        flowState.setData(url, for: "shotVideoURL")
-                    }
-                    .padding(.horizontal, 20)
-                    .scaleEffect(showVideoUpload ? 1 : 0.9)
-                    .opacity(showVideoUpload ? 1 : 0)
-                    .offset(y: showVideoUpload ? 0 : 30)
-                    .animation(
-                        .spring(response: 0.6, dampingFraction: 0.8, blendDuration: 0)
-                        .delay(0.25),
-                        value: showVideoUpload
-                    )
-                }
-                .padding(.top, 16)
-                .padding(.bottom, 100)
-            }
-            
-            // Bottom Continue Button
-            VStack {
-                AppButton(
-                    title: "Continue",
-                    action: {
-                        guard viewModel.shotVideoURL != nil else { return }
-                        // Store and proceed — gating now occurs on the last question page
-                        flowState.setData(viewModel.shotVideoURL, for: "shot-video-capture")
-                        flowState.proceed()
-                    },
-                    style: .primary,
-                    size: .large,
-                    icon: "arrow.right",
-                    isDisabled: viewModel.shotVideoURL == nil
-                )
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .background(
-                theme.background
-                    .opacity(0.95)
-                    .ignoresSafeArea(edges: .bottom)
-            )
-        }
-        .onAppear {
-            // Reset states first to ensure animation triggers
-            showVideoInstructions = false
-            showVideoUpload = false
-
-            // Trigger animations in sequence
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                withAnimation {
-                    showVideoInstructions = true
-                }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation {
-                    showVideoUpload = true
-                }
-            }
-        }
-        .onDisappear {
-            showVideoInstructions = false
-            showVideoUpload = false
-        }
-    }
-}
-
-extension StickAnalyzerView {
-    // MARK: - Validation Execution
-    @MainActor
-    private func executeValidation(flowState: AIFlowState) async {
-        guard let videoURL = flowState.getData(for: "shot-video-capture") as? URL else {
-            viewModel.error = AIAnalyzerError.aiProcessingFailed("Missing video data")
-            isValidating = false
-            if let resultsStage = flowState.flow.stages.first(where: { $0.id == "stick-analysis-results" }) {
-                flowState.currentStage = resultsStage
-            }
-            validationTask = nil
-            return
-        }
-
-        do {
-            let validation = try await StickAnalyzerService.validateStick(videoURL: videoURL)
-
-            validationResult = validation
-            isValidating = false
-            // progress estimator removed
-
-            if !validation.is_valid {
-                let reason = validation.reason ?? "Please record a valid hockey shot"
-                viewModel.error = AIAnalyzerError.invalidContent(.aiDetectedInvalidContent(reason))
-                if let resultsStage = flowState.flow.stages.first(where: { $0.id == "stick-analysis-results" }) {
-                    flowState.currentStage = resultsStage
-                }
-            }
-            // onSuccess callback in SharedValidationView will handle the valid case
-        } catch {
-            viewModel.error = AIAnalyzerError.from(error)
-            isValidating = false
-            if let resultsStage = flowState.flow.stages.first(where: { $0.id == "stick-analysis-results" }) {
-                flowState.currentStage = resultsStage
-            }
-        }
-
-        // Reset gate flag so next attempt re-gates
-        monetizationGranted = false
-        validationTask = nil
-    }
-
-    private func handleStageChange(_ stageId: String?, flowState: AIFlowState) {
-        guard let stageId else { return }
-
-        if stageId == "stick-validation" {
-            if !monetizationGranted {
-                // Intercept navigation and show paywall; re-proceed on grant
-                interceptedValidationNav = true
-                flowState.goBack()
-                triggerMonetizationGate { /* handled on grant */ }
-                return
-            }
-            beginValidation(flowState: flowState)
-        } else {
-            validationTask?.cancel()
-            validationTask = nil
-        }
-    }
-
-    private func beginValidation(flowState: AIFlowState) {
-        validationTask?.cancel()
-
-        validationResult = nil
-        validationError = nil
-        viewModel.error = nil
-        
-        isValidating = true
-        validationTask = Task { await executeValidation(flowState: flowState) }
     }
 
     // MARK: - Monetization Helpers
@@ -681,38 +443,7 @@ extension StickAnalyzerView {
         shouldActivateGate = true
     }
 
-    // MARK: - Helper Methods
-    private func mapPriorityFocus(_ id: String) -> PriorityFocus {
-        switch id {
-        case "power": return .power
-        case "accuracy": return .accuracy
-        case "balance": return .balance
-        default: return .balance
-        }
-    }
-
-    private func mapPrimaryShot(_ id: String) -> PrimaryShotType {
-        switch id {
-        case "wrist": return .wrist
-        case "slap": return .slap
-        case "snap": return .snap
-        case "backhand": return .backhand
-        default: return .wrist
-        }
-    }
-
-    private func mapShootingZone(_ id: String) -> ShootingZone {
-        switch id {
-        case "point": return .point
-        case "slot": return .slot
-        case "close": return .closeRange
-        case "varies": return .varies
-        default: return .varies
-        }
-    }
-
     // MARK: - Funnel Tracking
-
     private func trackFunnelProgress(for stageId: String) {
         let (stepName, stepNumber) = mapStageToFunnel(stageId)
 
@@ -723,14 +454,14 @@ extension StickAnalyzerView {
             funnel: "stick_analyzer",
             step: stepName,
             stepNumber: stepNumber,
-            totalSteps: 7
+            totalSteps: 6
         )
 
         // Track completion
         if stageId == "stick-analysis-results" {
             AnalyticsManager.shared.trackFunnelCompleted(
                 funnel: "stick_analyzer",
-                totalSteps: 7
+                totalSteps: 6
             )
         }
     }
@@ -739,26 +470,272 @@ extension StickAnalyzerView {
         switch stageId {
         case "player-profile":
             return ("player_profile", 1)
-        case "phone-setup-tutorial":
-            // Skip tutorial - it's optional and not always shown
-            return ("phone_setup_tutorial", 0)
-        case "shot-video-capture":
-            return ("shot_video_capture", 2)
+        case "body-scan":
+            return ("body_scan", 2)
         case "shooting-priority":
             return ("shooting_priority", 3)
         case "primary-shot":
             return ("primary_shot", 4)
         case "shooting-zone":
             return ("shooting_zone", 5)
-        case "stick-validation":
-            // Skip validation - it's an internal processing step
-            return ("stick_validation", 0)
         case "stick-analysis-processing":
             return ("analysis_processing", 6)
         case "stick-analysis-results":
-            return ("results", 7)
+            return ("results", 6)
         default:
             return ("unknown", 0)
         }
+    }
+}
+
+// MARK: - Body Scan Stage View
+struct BodyScanStageView: View {
+    @ObservedObject var flowState: AIFlowState
+    @ObservedObject var viewModel: StickAnalyzerViewModel
+    @Binding var showBodyScan: Bool
+    @Environment(\.theme) var theme
+    @State private var showContent = false
+
+    private var hasScan: Bool {
+        viewModel.bodyScanResult != nil
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 24) {
+                    if let bodyScan = viewModel.bodyScanResult {
+                        // Completed state - show compact card
+                        completedCard(bodyScan: bodyScan)
+                    } else {
+                        // Empty state - show instructions card with button inside
+                        emptyStateCard
+                    }
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 120)
+            }
+
+            // Bottom action area - Continue button (enabled when scan exists) + Skip option
+            VStack(spacing: 12) {
+                Button(action: {
+                    if hasScan {
+                        flowState.proceed()
+                    }
+                }) {
+                    HStack {
+                        Text("Continue")
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(hasScan ? .black : .white.opacity(0.3))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(hasScan ? theme.primary : Color.white.opacity(0.1))
+                    .cornerRadius(theme.cornerRadius)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(!hasScan)
+
+                // Skip option (only show when no scan)
+                if !hasScan {
+                    Button(action: {
+                        flowState.proceed()
+                    }) {
+                        Text("Skip for now")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(theme.textSecondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(
+                theme.background
+                    .opacity(0.95)
+                    .ignoresSafeArea(edges: .bottom)
+            )
+        }
+        .onAppear {
+            // Load saved body scan if available and not already set
+            if viewModel.bodyScanResult == nil {
+                if let savedScan = BodyScanStorage.shared.load() {
+                    viewModel.setBodyScan(savedScan)
+                    print("📸 [BodyScanStageView] Loaded saved body scan from \(savedScan.scanDate)")
+                }
+            }
+
+            showContent = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    showContent = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Empty State Card (with Start button inside)
+    private var emptyStateCard: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "figure.stand")
+                .font(.system(size: 60))
+                .foregroundColor(theme.primary)
+
+            Text("Body Scan")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(theme.text)
+
+            Text("We'll capture a full-body photo to analyze your proportions for optimal stick fitting.")
+                .font(.system(size: 15))
+                .foregroundColor(theme.textSecondary)
+                .multilineTextAlignment(.center)
+
+            VStack(alignment: .leading, spacing: 12) {
+                instructionRow(icon: "person.fill", text: "Stand naturally with arms at your sides")
+                instructionRow(icon: "camera.fill", text: "Have someone take your photo, or use a timer")
+                instructionRow(icon: "lightbulb.fill", text: "Good lighting helps accuracy")
+                instructionRow(icon: "arrow.up.and.down", text: "Full body should be visible")
+            }
+            .padding(.top, 8)
+
+            // Start button inside card
+            Button(action: {
+                HapticManager.shared.playSelection()
+                showBodyScan = true
+            }) {
+                HStack {
+                    Image(systemName: "figure.stand")
+                    Text("Start Body Scan")
+                }
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(theme.primary)
+                .cornerRadius(theme.cornerRadius)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.top, 12)
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: theme.cornerRadius)
+                .fill(theme.surface)
+        )
+        .padding(.horizontal, 20)
+        .scaleEffect(showContent ? 1 : 0.9)
+        .opacity(showContent ? 1 : 0)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: showContent)
+    }
+
+    // MARK: - Completed Card
+    private func completedCard(bodyScan: BodyScanResult) -> some View {
+        VStack(spacing: theme.spacing.lg) {
+            // Header
+            HStack {
+                Image(systemName: "figure.stand")
+                    .font(theme.fonts.body)
+                    .foregroundColor(theme.primary)
+                Text("Body Scan")
+                    .font(theme.fonts.headline)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+
+            Divider().background(Color.white.opacity(0.1))
+
+            HStack(spacing: 16) {
+                // Thumbnail
+                if let image = bodyScan.loadImage() {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 60, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(theme.primary.opacity(0.3), lineWidth: 1)
+                        )
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(theme.surface)
+                        .frame(width: 60, height: 80)
+                        .overlay(
+                            Image(systemName: "figure.stand")
+                                .foregroundColor(theme.textSecondary)
+                        )
+                }
+
+                // Info
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.system(size: 14))
+                        Text("Body scan captured")
+                            .font(theme.fonts.body)
+                            .foregroundColor(.white)
+                    }
+
+                    Text("Captured \(formattedDate(bodyScan.scanDate))")
+                        .font(theme.fonts.caption)
+                        .foregroundColor(theme.textSecondary)
+                }
+
+                Spacer()
+            }
+
+            // Rescan button
+            Button(action: {
+                HapticManager.shared.playSelection()
+                showBodyScan = true
+            }) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Rescan")
+                }
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(theme.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(theme.primary.opacity(0.12))
+                .cornerRadius(theme.cornerRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.cornerRadius)
+                        .stroke(theme.primary.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.cornerRadius)
+                .fill(theme.surface)
+        )
+        .padding(.horizontal, 20)
+        .scaleEffect(showContent ? 1 : 0.9)
+        .opacity(showContent ? 1 : 0)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: showContent)
+    }
+
+    // MARK: - Helper Views
+    private func instructionRow(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(theme.primary)
+                .frame(width: 24)
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundColor(theme.textSecondary)
+            Spacer()
+        }
+    }
+
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }

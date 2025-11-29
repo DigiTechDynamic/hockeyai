@@ -74,6 +74,39 @@ class GeminiProvider: AIProvider {
             }
         }
     }
+
+    /// Generate content from text-only prompt (no media)
+    func generateContent(
+        prompt: String,
+        generationConfig: [String: Any]?,
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        guard let aiService = aiService else {
+            completion(.failure(AIProviderError.providerUnavailable("Gemini API key not available")))
+            return
+        }
+
+        print("🤖 [GeminiProvider] Starting text-only generation with Gemini...")
+
+        let config = generationConfig ?? createDefaultConfig()
+        let parts: [[String: Any]] = [["text": prompt]]
+
+        // Call AI service with text-only parts
+        aiService.generateContent(
+            parts: parts,
+            generationConfig: config,
+            skipDebugLogging: false
+        ) { result in
+            switch result {
+            case .success(let response):
+                print("✅ [GeminiProvider] Text generation complete")
+                completion(.success(response))
+            case .failure(let error):
+                print("❌ [GeminiProvider] Text generation failed: \(error)")
+                completion(.failure(error))
+            }
+        }
+    }
     
     private func analyzeVideoWithRetry(
         videoURL: URL,

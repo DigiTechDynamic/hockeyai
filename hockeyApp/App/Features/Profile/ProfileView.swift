@@ -50,6 +50,9 @@ struct ProfileView: View {
                     // Hockey Profile
                     hockeyProfileSection
 
+                    // Body Scan
+                    BodyScanCard()
+
                     // App Settings
                     appSettingsSection
 

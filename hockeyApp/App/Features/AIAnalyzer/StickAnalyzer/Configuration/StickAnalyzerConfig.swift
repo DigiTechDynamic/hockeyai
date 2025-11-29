@@ -3,41 +3,36 @@ import Foundation
 // MARK: - Stick Analyzer Configuration
 /// Centralized configuration for Stick Analyzer Flow including prompts, stages, and settings
 struct StickAnalyzerConfig {
-    
+
     // MARK: - Flow Builder
     static func buildFlow() -> StickAnalyzerFlow {
         print("🏒 [StickAnalyzerConfig] Creating stick analyzer flow")
-        
-        var stages: [any AIFlowStage] = []
 
-        // Phone setup tutorial is now shown just-in-time when the user taps "Record Video"
+        var stages: [any AIFlowStage] = []
 
         // Stage 1: Player Profile
         stages.append(createPlayerProfileStage())
 
-        // Stage 2: Shot Video Capture (simplified to one stage)
-        stages.append(createShotVideoStage())
+        // Stage 2: Body Scan (replaces video capture - lower friction)
+        stages.append(createBodyScanStage())
 
         // Stages 3-5: Shooting Preferences (3 separate stages like AI Coach)
         stages.append(createShootingPriorityStage())     // Question 1
         stages.append(createPrimaryShotStage())          // Question 2
         stages.append(createShootingZoneStage())         // Question 3
 
-        // Stage 6: Validation
-        stages.append(createValidationStage())
-
-        // Stage 7: Analysis Processing
+        // Stage 6: Analysis Processing (no validation needed for body scan)
         stages.append(createProcessingStage())
 
-        // Stage 8: Results
+        // Stage 7: Results
         stages.append(createResultsStage())
-        
+
         print("📱 [StickAnalyzerConfig] Created flow with \(stages.count) stages")
         return StickAnalyzerFlow(stages: stages)
     }
-    
+
     // MARK: - Stage Configurations
-    
+
     private static func createPlayerProfileStage() -> PlayerProfileStage {
         return PlayerProfileStage(
             id: "player-profile",
@@ -48,29 +43,19 @@ struct StickAnalyzerConfig {
         )
     }
 
-    private static func createTutorialStage() -> CustomStage {
+    private static func createBodyScanStage() -> CustomStage {
         return CustomStage(
-            id: "phone-setup-tutorial",
-            title: "",
-            subtitle: ""
+            id: "body-scan",
+            title: "Body Scan",
+            subtitle: "",
+            isRequired: false,  // Not required - user can skip
+            canSkip: true,      // Allow skip
+            canGoBack: true,
+            showsHeader: true,  // Show the flow header with title and X button
+            showsProgress: true // Show progress bar
         )
     }
 
-    private static func createShotVideoStage() -> MediaCaptureStage {
-        return MediaCaptureStage(
-            id: "shot-video-capture",
-            title: "Record Shot",
-            subtitle: "",
-            isRequired: true,
-            canSkip: false,
-            mediaTypes: [.video],
-            maxItems: 1,
-            minItems: 1,
-            instructions: "Record a video of your best shot from any angle",
-            maxVideos: 1
-        )
-    }
-    
     private static func createShootingPriorityStage() -> SelectionStage {
         return SelectionStage(
             id: "shooting-priority",
@@ -178,22 +163,13 @@ struct StickAnalyzerConfig {
             multiSelect: false
         )
     }
-    
-    private static func createValidationStage() -> ProcessingStage {
-        return ProcessingStage(
-            id: "stick-validation",
-            title: "Validating Shot",
-            subtitle: "",
-            processingMessage: "Checking your hockey shot video..."
-        )
-    }
 
     private static func createProcessingStage() -> ProcessingStage {
         return ProcessingStage(
             id: "stick-analysis-processing",
-            title: "Analyzing Stick",
+            title: "Analyzing",
             subtitle: "",
-            processingMessage: "Our AI is analyzing your shooting technique and player profile..."
+            processingMessage: "Our AI is analyzing your body proportions and preferences..."
         )
     }
     
@@ -206,7 +182,7 @@ struct StickAnalyzerConfig {
     }
     
     // MARK: - AI Prompt Generation
-    
+
     static func createAnalysisPrompt(
         playerProfile: PlayerProfile,
         questionnaire: ShootingQuestionnaire
@@ -224,10 +200,10 @@ struct StickAnalyzerConfig {
         let shootingZone = questionnaire.shootingZone.rawValue
 
         return """
-        Analyze this hockey shot and recommend ideal stick specifications.
+        Analyze this player's full body photo and provide personalized hockey stick recommendations.
 
         PLAYER PROFILE:
-        - Height: \(Int(height))"
+        - Height: \(Int(height))" (use this as reference for proportions)
         - Weight: \(Int(weight)) lbs
         - Position: \(positionStr)
         - Shoots: \(handednessStr)
@@ -238,19 +214,20 @@ struct StickAnalyzerConfig {
         - Primary Shot Type: \(primaryShot) (most frequently used)
         - Typical Shooting Zone: \(shootingZone)
 
-        ANALYSIS FOCUS:
-        1. Evaluate stick flex usage and loading in the video
-        2. Assess hand positioning, grip strength, and control
-        3. Analyze follow-through mechanics and energy transfer
-        4. Consider player's shooting priority (\(shootingPriority)) when recommending flex
-        5. Factor in primary shot type (\(primaryShot)) for kick point recommendation
-        6. Account for shooting zone (\(shootingZone)) for stick length and lie
+        BODY ANALYSIS FOCUS:
+        1. Estimate arm span and proportions from the body photo
+        2. Assess body type (lean, athletic, stocky) which affects flex preference
+        3. Note shoulder width for grip positioning guidance
+        4. Consider torso-to-leg ratio for stance and lie angle
+        5. Factor in overall build for power potential
 
         RECOMMENDATIONS SHOULD CONSIDER:
+        - Body proportions visible in photo (arm span affects ideal stick length)
+        - Weight and build type for flex recommendations
         - For "\(shootingPriority)" priority: adjust flex and kick point accordingly
         - For "\(primaryShot)" as primary shot: optimize stick characteristics for this shot type
         - For "\(shootingZone)" zone: consider appropriate stick length and lie angle
-        - Provide recommendations based solely on player profile and shooting technique observed in video
+        - Provide recommendations based on player profile and body proportions observed in photo
         """
     }
 }

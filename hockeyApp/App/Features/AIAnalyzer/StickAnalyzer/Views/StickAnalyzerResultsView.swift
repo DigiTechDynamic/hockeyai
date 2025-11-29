@@ -1,5 +1,4 @@
 import SwiftUI
-import AVFoundation
 
 // MARK: - Stick Analyzer Results View
 struct StickAnalyzerResultsView: View {
@@ -173,7 +172,7 @@ struct StickAnalyzerResultsView: View {
         }
     }
 
-    // MARK: - Shot Coach-style Header
+    // MARK: - Analysis Header
     private func analysisHeader(result: StickAnalysisResult) -> some View {
         VStack(spacing: 6) {
             Text("STICK PRESCRIPTION")
@@ -183,9 +182,9 @@ struct StickAnalyzerResultsView: View {
 
             HStack(spacing: theme.spacing.md) {
                 HStack(spacing: 4) {
-                    Image(systemName: "camera.viewfinder")
+                    Image(systemName: "figure.stand")
                         .font(.system(size: 12))
-                    Text("\(framesAnalyzed(for: result.shotVideoURL)) frames")
+                    Text("Body Scan Analysis")
                         .font(.system(size: 12))
                 }
 
@@ -203,20 +202,6 @@ struct StickAnalyzerResultsView: View {
             .foregroundColor(theme.textSecondary.opacity(0.8))
         }
         .padding(.bottom, theme.spacing.md)
-    }
-
-    private func framesAnalyzed(for url: URL) -> Int {
-        let asset = AVAsset(url: url)
-        let durationSeconds = CMTimeGetSeconds(asset.duration)
-        // Try to read nominal frame rate from the first video track
-        if let track = asset.tracks(withMediaType: .video).first {
-            let fps = track.nominalFrameRate
-            if fps > 0 {
-                return max(1, Int((durationSeconds * Double(fps)).rounded()))
-            }
-        }
-        // Fallback to 30fps estimate
-        return max(1, Int((durationSeconds * 30).rounded()))
     }
 
     private func confidenceColor(_ confidence: Double) -> Color {

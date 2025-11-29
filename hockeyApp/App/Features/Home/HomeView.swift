@@ -74,7 +74,8 @@ struct HomeView: View {
                         }
                     )
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+
+                    Spacer().frame(height: 20)
                 }
             }
 
@@ -114,6 +115,7 @@ struct HomeView: View {
                 })
             }
             .navigationViewStyle(.stack)
+
         }
     }
 

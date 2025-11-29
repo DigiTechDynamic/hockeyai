@@ -526,8 +526,9 @@ struct CustomStage: AIFlowStage {
     let canSkip: Bool
     let canGoBack: Bool
     let showsHeader: Bool
+    let showsProgress: Bool
 
-    init(id: String, title: String, subtitle: String, isRequired: Bool = false, canSkip: Bool = false, canGoBack: Bool = false, showsHeader: Bool = false) {
+    init(id: String, title: String, subtitle: String, isRequired: Bool = false, canSkip: Bool = false, canGoBack: Bool = false, showsHeader: Bool = false, showsProgress: Bool = false) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
@@ -535,6 +536,7 @@ struct CustomStage: AIFlowStage {
         self.canSkip = canSkip
         self.canGoBack = canGoBack
         self.showsHeader = showsHeader
+        self.showsProgress = showsProgress
     }
 
     func validate(data: Any?) -> AIValidationResult {
@@ -637,8 +639,16 @@ struct AIFlowContainer<Content: View>: View {
                     )
                 }
                 
-                // Progress indicator (hide for CustomStage like tutorial)
-                if flowState.flow.showsProgress && !(flowState.currentStage is CustomStage) {
+                // Progress indicator (hide for CustomStage unless showsProgress is true)
+                let showProgressBar: Bool = {
+                    guard flowState.flow.showsProgress else { return false }
+                    if let customStage = flowState.currentStage as? CustomStage {
+                        return customStage.showsProgress
+                    }
+                    return !(flowState.currentStage is CustomStage)
+                }()
+
+                if showProgressBar {
                     AIProgressBar(
                         currentStep: flowState.currentStageIndex() + 1,
                         totalSteps: flowState.totalStages()

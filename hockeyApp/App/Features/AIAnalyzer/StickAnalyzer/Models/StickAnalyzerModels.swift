@@ -151,7 +151,7 @@ enum ShootingZone: String, CaseIterable, Codable {
 struct StickAnalysisResult {
     let confidence: Double
     let playerProfile: PlayerProfile
-    let shotVideoURL: URL
+    let bodyImagePath: String?  // Path to body scan image (replaces shotVideoURL)
     let recommendations: StickRecommendations
     let processingTime: TimeInterval
 }
