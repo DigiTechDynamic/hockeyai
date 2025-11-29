@@ -11,6 +11,7 @@ struct BodyScanView: View {
 
     let onComplete: (BodyScanResult) -> Void
     let onCancel: () -> Void
+    var analyticsSource: BodyScanAnalytics.Source = .stickAnalyzer
 
     @StateObject private var viewModel = BodyScanViewModel()
     @StateObject private var audioGuide = BodyScanAudioGuide()
@@ -232,6 +233,8 @@ struct BodyScanView: View {
                 if onboardingPage < totalOnboardingPages {
                     withAnimation { onboardingPage += 1 }
                 } else {
+                    // Track when user actually starts the scan
+                    BodyScanAnalytics.trackStarted(source: analyticsSource)
                     withAnimation { showOnboarding = false }
                 }
             }) {

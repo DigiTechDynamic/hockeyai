@@ -25,13 +25,16 @@ struct BodyScanCard: View {
         .fullScreenCover(isPresented: $showBodyScan) {
             BodyScanView(
                 onComplete: { result in
+                    BodyScanAnalytics.trackCaptured(source: .profilePage)
                     BodyScanStorage.shared.save(result)
                     bodyScanResult = result
                     showBodyScan = false
                 },
                 onCancel: {
+                    BodyScanAnalytics.trackCancelled(source: .profilePage)
                     showBodyScan = false
-                }
+                },
+                analyticsSource: .profilePage
             )
         }
     }

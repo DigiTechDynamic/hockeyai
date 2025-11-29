@@ -144,18 +144,10 @@ struct StickAnalyzerView: View {
             }
             .onAppear {
                 // Track funnel start
-                AnalyticsManager.shared.trackFunnelStep(
-                    funnel: "stick_analyzer",
-                    step: "started",
-                    stepNumber: 0,
-                    totalSteps: 6
-                )
-
-                // Track initial stage
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    if let stageId = flowState.currentStage?.id {
-                        trackFunnelProgress(for: stageId)
-                    }
+                StickAnalyzerAnalytics.trackStarted(source: "equipment_tab")
+                // Track initial stage (onChange doesn't fire for the first value)
+                if let stageId = flowState.currentStage?.id {
+                    trackFunnelProgress(for: stageId)
                 }
             }
         }
@@ -185,6 +177,8 @@ struct StickAnalyzerView: View {
     private func bodyScanFullScreenView() -> some View {
         BodyScanView(
             onComplete: { result in
+                // Track successful capture
+                BodyScanAnalytics.trackCaptured(source: .stickAnalyzer)
                 // Save the body scan for future use
                 BodyScanStorage.shared.save(result)
                 viewModel.setBodyScan(result)
@@ -192,8 +186,10 @@ struct StickAnalyzerView: View {
                 // Proceed will be called from the stage view
             },
             onCancel: {
+                BodyScanAnalytics.trackCancelled(source: .stickAnalyzer)
                 showBodyScan = false
-            }
+            },
+            analyticsSource: .stickAnalyzer
         )
     }
 
@@ -445,46 +441,52 @@ extension StickAnalyzerView {
 
     // MARK: - Funnel Tracking
     private func trackFunnelProgress(for stageId: String) {
-        let (stepName, stepNumber) = mapStageToFunnel(stageId)
-
-        // Skip tracking for optional/internal steps (step 0)
-        guard stepNumber > 0 else { return }
-
-        AnalyticsManager.shared.trackFunnelStep(
-            funnel: "stick_analyzer",
-            step: stepName,
-            stepNumber: stepNumber,
-            totalSteps: 6
-        )
-
-        // Track completion
-        if stageId == "stick-analysis-results" {
-            AnalyticsManager.shared.trackFunnelCompleted(
-                funnel: "stick_analyzer",
-                totalSteps: 6
-            )
+        switch stageId {
+        case "player-profile":
+            // Track when user views player profile page
+            StickAnalyzerAnalytics.trackPlayerProfile()
+        case "body-scan":
+            // Tracked when user proceeds (captured/skipped/loaded)
+            break
+        case "shooting-priority":
+            // Track when user reaches preferences section (first of 3 questions)
+            StickAnalyzerAnalytics.trackPreferencesStarted()
+        case "primary-shot":
+            // Second preference stage - no separate tracking
+            break
+        case "shooting-zone":
+            // Third preference stage - no separate tracking
+            break
+        case "stick-analysis-processing":
+            let hasBodyScan = viewModel.bodyScanResult != nil
+            StickAnalyzerAnalytics.trackAnalysisStarted(hasBodyScan: hasBodyScan)
+        case "stick-analysis-results":
+            trackResultsViewed()
+        default:
+            break
         }
     }
 
-    private func mapStageToFunnel(_ stageId: String) -> (String, Int) {
-        switch stageId {
-        case "player-profile":
-            return ("player_profile", 1)
-        case "body-scan":
-            return ("body_scan", 2)
-        case "shooting-priority":
-            return ("shooting_priority", 3)
-        case "primary-shot":
-            return ("primary_shot", 4)
-        case "shooting-zone":
-            return ("shooting_zone", 5)
-        case "stick-analysis-processing":
-            return ("analysis_processing", 6)
-        case "stick-analysis-results":
-            return ("results", 6)
-        default:
-            return ("unknown", 0)
-        }
+    private func trackResultsViewed() {
+        guard let result = viewModel.analysisResult else { return }
+
+        let hasBodyScan = viewModel.bodyScanResult != nil
+        let topStick = result.recommendations.topStickModels.first
+
+        // Track Step 6: Analysis completed (results ready)
+        StickAnalyzerAnalytics.trackAnalysisCompleted(
+            processingTime: 0, // We don't track processing time currently
+            hasBodyScan: hasBodyScan,
+            recommendationCount: result.recommendations.topStickModels.count
+        )
+
+        // Track Step 7: User views results (funnel complete)
+        StickAnalyzerAnalytics.trackCompleted(
+            topStickBrand: topStick?.brand,
+            topStickModel: topStick?.model,
+            recommendedFlex: result.recommendations.idealFlex.min,
+            hasBodyScan: hasBodyScan
+        )
     }
 }
 
@@ -495,6 +497,7 @@ struct BodyScanStageView: View {
     @Binding var showBodyScan: Bool
     @Environment(\.theme) var theme
     @State private var showContent = false
+    @State private var wasLoadedFromStorage = false
 
     private var hasScan: Bool {
         viewModel.bodyScanResult != nil
@@ -520,6 +523,11 @@ struct BodyScanStageView: View {
             VStack(spacing: 12) {
                 Button(action: {
                     if hasScan {
+                        // Track body scan outcome (captured or loaded from storage)
+                        let outcome: StickAnalyzerAnalytics.BodyScanOutcome = wasLoadedFromStorage
+                            ? .loadedFromStorage
+                            : .captured
+                        StickAnalyzerAnalytics.trackBodyScan(outcome: outcome)
                         flowState.proceed()
                     }
                 }) {
@@ -540,6 +548,7 @@ struct BodyScanStageView: View {
                 // Skip option (only show when no scan)
                 if !hasScan {
                     Button(action: {
+                        StickAnalyzerAnalytics.trackBodyScan(outcome: .skipped)
                         flowState.proceed()
                     }) {
                         Text("Skip for now")
@@ -562,6 +571,8 @@ struct BodyScanStageView: View {
             if viewModel.bodyScanResult == nil {
                 if let savedScan = BodyScanStorage.shared.load() {
                     viewModel.setBodyScan(savedScan)
+                    wasLoadedFromStorage = true
+                    BodyScanAnalytics.trackLoadedFromStorage()
                     print("📸 [BodyScanStageView] Loaded saved body scan from \(savedScan.scanDate)")
                 }
             }
@@ -689,6 +700,7 @@ struct BodyScanStageView: View {
             // Rescan button
             Button(action: {
                 HapticManager.shared.playSelection()
+                wasLoadedFromStorage = false  // Reset since user is rescanning
                 showBodyScan = true
             }) {
                 HStack {
