@@ -113,8 +113,8 @@ struct BodyScanView: View {
             // Subtle radial glow behind mannequin
             RadialGradient(
                 colors: [
-                    theme.primary.opacity(0.15),
-                    theme.primary.opacity(0.05),
+                    Color.white.opacity(0.08),
+                    Color.white.opacity(0.03),
                     Color.clear
                 ],
                 center: .center,
@@ -174,7 +174,7 @@ struct BodyScanView: View {
                         .frame(maxHeight: 450)
 
                     // Animated scanning line overlay
-                    AnimatedScanLine(color: theme.primary)
+                    AnimatedScanLine(color: .white)
                         .frame(maxHeight: 450)
                         .mask(
                             Image("body_scan_hero")
@@ -203,9 +203,9 @@ struct BodyScanView: View {
                     .frame(height: 58)
                     .background(
                         ZStack {
-                            // Primary fill
+                            // Primary fill - white
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(theme.primary)
+                                .fill(Color.white)
 
                             // Inner highlight
                             RoundedRectangle(cornerRadius: 16)
@@ -221,8 +221,7 @@ struct BodyScanView: View {
                                 )
                         }
                     )
-                    .shadow(color: theme.primary.opacity(0.5), radius: 20, y: 8)
-                    .shadow(color: theme.primary.opacity(0.3), radius: 40, y: 16)
+                    .shadow(color: Color.white.opacity(0.3), radius: 20, y: 8)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
@@ -324,7 +323,7 @@ struct BodyScanView: View {
                         dotPosition: CGPoint(x: geo.size.width * 0.50, y: geo.size.height * 0.10),
                         labelPosition: CGPoint(x: geo.size.width * 0.18, y: geo.size.height * 0.10),
                         alignment: .leading,
-                        color: theme.primary
+                        color: .white
                     )
 
                     // Spread arms - right side
@@ -333,7 +332,7 @@ struct BodyScanView: View {
                         dotPosition: CGPoint(x: geo.size.width * 0.88, y: geo.size.height * 0.38),
                         labelPosition: CGPoint(x: geo.size.width * 0.78, y: geo.size.height * 0.45),
                         alignment: .trailing,
-                        color: theme.primary
+                        color: .white
                     )
 
                     // Keep distance with feet - bottom left
@@ -342,7 +341,7 @@ struct BodyScanView: View {
                         dotPosition: CGPoint(x: geo.size.width * 0.38, y: geo.size.height * 0.92),
                         labelPosition: CGPoint(x: geo.size.width * 0.18, y: geo.size.height * 0.82),
                         alignment: .leading,
-                        color: theme.primary
+                        color: .white
                     )
                 }
             }
@@ -382,14 +381,14 @@ struct BodyScanView: View {
                 BackgroundComparisonCard(
                     imageName: "body_scan_bg_good",
                     isGood: true,
-                    accentColor: theme.primary
+                    accentColor: .white
                 )
 
                 // Bad background
                 BackgroundComparisonCard(
                     imageName: "body_scan_bg_bad",
                     isGood: false,
-                    accentColor: theme.primary
+                    accentColor: .white
                 )
             }
             .padding(.horizontal, 24)
@@ -429,7 +428,7 @@ struct BodyScanView: View {
                     .font(.system(size: 64, weight: .medium))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [theme.primary, theme.primary.opacity(0.7)],
+                            colors: [Color.white, Color.white.opacity(0.7)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -456,7 +455,7 @@ struct BodyScanView: View {
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(theme.primary)
+                    .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
 
@@ -474,14 +473,14 @@ struct BodyScanView: View {
                         Text(isAudioEnabled ? "Mute Audio" : "Unmute Audio")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .foregroundColor(isAudioEnabled ? .white : theme.primary)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(isAudioEnabled ? Color.white.opacity(0.1) : theme.primary.opacity(0.15))
+                    .background(Color.white.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(isAudioEnabled ? Color.white.opacity(0.2) : theme.primary.opacity(0.3), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
                     )
                 }
             }
@@ -529,7 +528,7 @@ struct BodyScanView: View {
             // Pose detection status
             Text(viewModel.isPoseValid ? (viewModel.isStable ? "Hold still" : "Stop moving") : "Looking for body...")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(viewModel.isPoseValid ? (viewModel.isStable ? theme.primary : .orange) : .white.opacity(0.7))
+                .foregroundColor(viewModel.isPoseValid ? (viewModel.isStable ? .white : .orange) : .white.opacity(0.7))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(.ultraThinMaterial)
@@ -564,7 +563,7 @@ struct BodyScanView: View {
                 // Pose detection status
                 Text(viewModel.isPoseValid ? "Body detected" : "Looking for body...")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(viewModel.isPoseValid ? theme.primary : .white.opacity(0.7))
+                    .foregroundColor(viewModel.isPoseValid ? .white : .white.opacity(0.7))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(.ultraThinMaterial)
@@ -586,12 +585,12 @@ struct BodyScanView: View {
 
             ZStack {
                 Circle()
-                    .fill(theme.primary.opacity(0.15))
+                    .fill(Color.white.opacity(0.1))
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "figure.arms.open")
                     .font(.system(size: 50, weight: .medium))
-                    .foregroundColor(theme.primary)
+                    .foregroundColor(.white)
             }
 
             VStack(spacing: 12) {
@@ -619,7 +618,7 @@ struct BodyScanView: View {
                 .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(theme.primary)
+                .background(Color.white)
                 .cornerRadius(16)
             }
             .padding(.horizontal, 24)
@@ -644,7 +643,7 @@ struct BodyScanView: View {
                     points: viewModel.detectedPoints,
                     size: geo.size,
                     isStable: viewModel.isStable,
-                    primaryColor: theme.primary
+                    primaryColor: .white
                 )
 
                 // Instructions at bottom
@@ -663,7 +662,7 @@ struct BodyScanView: View {
                         // Progress bar when holding
                         if viewModel.isPoseValid && viewModel.isStable && viewModel.holdProgress > 0 {
                             ProgressView(value: viewModel.holdProgress)
-                                .progressViewStyle(LinearProgressViewStyle(tint: theme.primary))
+                                .progressViewStyle(LinearProgressViewStyle(tint: .white))
                                 .frame(width: 200)
                                 .padding(.top, 8)
                         }
@@ -715,7 +714,7 @@ struct BodyScanView: View {
 
     private var statusColor: Color {
         if viewModel.isPoseValid && viewModel.isStable {
-            return theme.primary
+            return .white
         } else if viewModel.isPoseValid {
             return .orange
         } else {
@@ -728,7 +727,7 @@ struct BodyScanView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 80))
-                .foregroundColor(theme.primary)
+                .foregroundColor(.white)
 
             Text("Captured!")
                 .font(.system(size: 24, weight: .bold))
@@ -748,7 +747,7 @@ struct BodyScanView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(theme.primary)
+                .tint(.white)
 
             Text("Analyzing measurements...")
                 .font(.system(size: 18, weight: .semibold))
@@ -771,7 +770,7 @@ struct BodyScanView: View {
             // Success checkmark
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(theme.primary)
+                .foregroundColor(.white)
 
             Text("Photo Captured!")
                 .font(.system(size: 28, weight: .bold))
@@ -792,7 +791,7 @@ struct BodyScanView: View {
                     .clipped()
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(theme.primary.opacity(0.5), lineWidth: 2)
+                            .stroke(Color.white.opacity(0.5), lineWidth: 2)
                     )
             }
 
@@ -810,7 +809,7 @@ struct BodyScanView: View {
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(theme.primary)
+                        .background(Color.white)
                         .cornerRadius(16)
                 }
 

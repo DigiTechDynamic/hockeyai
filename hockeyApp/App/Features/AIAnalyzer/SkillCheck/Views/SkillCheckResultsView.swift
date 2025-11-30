@@ -379,12 +379,12 @@ private struct PremiumEliteBreakdownCard: View {
         VStack(spacing: 0) {
             // Header
             VStack(alignment: .leading, spacing: 8) {
-                Text("THE ELITE BREAKDOWN")
+                Text("FULL BREAKDOWN")
                     .font(.system(size: 13, weight: .heavy))
                     .foregroundColor(theme.primary)
                     .tracking(1.5)
 
-                Text(isUnlocked ? "Viral-ready insights for your highlight reel" : "See your viral-ready insights")
+                Text(isUnlocked ? "Your personalized feedback" : "See what the AI really found")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
             }
@@ -394,146 +394,66 @@ private struct PremiumEliteBreakdownCard: View {
             .padding(.bottom, 16)
 
             if isUnlocked {
-                // Unlocked content - viral breakdown
-                VStack(alignment: .leading, spacing: 18) {
-                    // 1. STYLE METRICS
-                    VStack(alignment: .leading, spacing: 14) {
+                // Unlocked content - actionable feedback
+                VStack(alignment: .leading, spacing: 20) {
+                    // 1. WHAT YOU DID WELL
+                    VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 8) {
-                            Image(systemName: "star.fill")
+                            Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 18))
-                                .foregroundColor(theme.primary)
-                            Text("STYLE METRICS")
+                                .foregroundColor(.green)
+                            Text("WHAT YOU DID WELL")
                                 .font(.system(size: 12, weight: .heavy))
-                                .foregroundColor(theme.primary)
+                                .foregroundColor(.green)
                                 .tracking(1.2)
                         }
 
-                        // Flow Score
-                        ScoreMetricRow(
-                            emoji: "✨",
-                            label: "Flow",
-                            score: breakdown.flowScore
-                        )
-
-                        // Confidence Score
-                        ScoreMetricRow(
-                            emoji: "💪",
-                            label: "Confidence",
-                            score: breakdown.confidenceScore
-                        )
-
-                        // Style Points
-                        ScoreMetricRow(
-                            emoji: "🔥",
-                            label: "Style Points",
-                            score: breakdown.stylePoints
-                        )
-                    }
-
-                    Divider().background(theme.primary.opacity(0.2))
-
-                    // 2. VIRAL POTENTIAL
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                                .font(.system(size: 18))
-                                .foregroundColor(.purple)
-                            Text("VIRAL POTENTIAL")
-                                .font(.system(size: 12, weight: .heavy))
-                                .foregroundColor(.purple)
-                                .tracking(1.2)
-                        }
-
-                        // Views Estimate
-                        HStack(spacing: 8) {
-                            Text("📈")
-                                .font(.system(size: 16))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Estimated TikTok Views")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.9))
-                                Text(breakdown.viralViewsEstimate)
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(theme.primary)
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(breakdown.whatYouDidWell, id: \.self) { item in
+                                feedbackRow(text: item, color: .green)
                             }
-                        }
-
-                        // Viral Caption
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 6) {
-                                Text("📝")
-                                    .font(.system(size: 16))
-                                Text("Ready-to-Post Caption")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.9))
-                            }
-
-                            Text(breakdown.viralCaption)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white.opacity(0.95))
-                                .padding(12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.white.opacity(0.05))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(theme.primary.opacity(0.2), lineWidth: 1)
-                                        )
-                                )
                         }
                     }
 
-                    Divider().background(theme.primary.opacity(0.2))
+                    Divider().background(Color.white.opacity(0.1))
 
-                    // 3. YOUR IDENTITY
+                    // 2. WHAT TO WORK ON
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 8) {
-                            Image(systemName: "person.badge.key.fill")
+                            Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 18))
                                 .foregroundColor(.orange)
-                            Text("YOUR SIGNATURE")
+                            Text("WHAT TO WORK ON")
                                 .font(.system(size: 12, weight: .heavy))
                                 .foregroundColor(.orange)
                                 .tracking(1.2)
                         }
 
-                        // Signature Move Name
-                        HStack(spacing: 8) {
-                            Text("⚡")
-                                .font(.system(size: 16))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Move Name")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.9))
-                                Text("\"\(breakdown.signatureMoveName)\"")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(theme.primary)
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(breakdown.whatToWorkOn, id: \.self) { item in
+                                feedbackRow(text: item, color: .orange)
                             }
                         }
+                    }
 
-                        // Trash Talk Line
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 6) {
-                                Text("💬")
-                                    .font(.system(size: 16))
-                                Text("What You'd Say After")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.9))
+                    Divider().background(Color.white.opacity(0.1))
+
+                    // 3. HOW TO IMPROVE
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .font(.system(size: 18))
+                                .foregroundColor(theme.primary)
+                            Text("HOW TO IMPROVE")
+                                .font(.system(size: 12, weight: .heavy))
+                                .foregroundColor(theme.primary)
+                                .tracking(1.2)
+                        }
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(breakdown.howToImprove, id: \.self) { item in
+                                drillRow(text: item)
                             }
-
-                            Text("\"\(breakdown.trashTalkLine)\"")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .italic()
-                                .foregroundColor(.white.opacity(0.95))
-                                .padding(12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.white.opacity(0.05))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
-                                        )
-                                )
                         }
                     }
                 }
@@ -543,22 +463,24 @@ private struct PremiumEliteBreakdownCard: View {
                 // Locked content preview
                 ZStack {
                     // Blurred background with hints
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("✨ Flow: XX/100")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("✓ Great weight transfer from back to...")
                             .blur(radius: 6)
-                        Text("💪 Confidence: XX/100")
+                        Text("✓ Smooth stick flex on the release...")
                             .blur(radius: 6)
-                        Text("🔥 Style Points: XX/100")
+                        Text("△ Keep elbow higher during...")
                             .blur(radius: 6)
-                        Text("📈 Viral Potential: XXX,XXX+ views")
+                        Text("△ Bend knees more for better...")
                             .blur(radius: 6)
-                        Text("⚡ Signature Move: \"XXXXXXX\"")
+                        Text("◆ Wall shots - 50 reps daily...")
+                            .blur(radius: 6)
+                        Text("◆ One-knee wrist shots to isolate...")
                             .blur(radius: 6)
                     }
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.white.opacity(0.5))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 140)
+                    .frame(height: 150)
                     .padding(20)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -570,50 +492,28 @@ private struct PremiumEliteBreakdownCard: View {
                     )
 
                     // Lock overlay
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
                         Image(systemName: "lock.fill")
-                            .font(.system(size: 40))
+                            .font(.system(size: 36))
                             .foregroundColor(theme.primary)
 
-                        Text("6 Elite Insights")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white)
-
-                        Text("Viral-ready content locked")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
+                        VStack(spacing: 12) {
+                            featureRow(icon: "checkmark.circle.fill", text: "Technique analysis")
+                            featureRow(icon: "checkmark.circle.fill", text: "What to improve")
+                            featureRow(icon: "checkmark.circle.fill", text: "Drills to practice")
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
 
-                // Social proof
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(theme.primary)
-                        .frame(width: 8, height: 8)
-
-                    Text("2,847 players unlocked today")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .padding(.top, 16)
-
-                Text("Limited time: Viral breakdown available")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.white.opacity(0.6))
-                    .padding(.top, 4)
-
                 // Unlock button
                 Button(action: onUnlock) {
                     HStack(spacing: 8) {
-                        Image(systemName: "sparkles")
+                        Image(systemName: "lock.open.fill")
                             .font(.system(size: 16, weight: .semibold))
 
-                        Text("Reveal My Elite Breakdown")
+                        Text("Unlock Full Breakdown")
                             .font(.system(size: 17, weight: .bold))
-
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
@@ -661,6 +561,46 @@ private struct PremiumEliteBreakdownCard: View {
         .shadow(color: Color.black.opacity(0.4), radius: 24, y: 12)
         .opacity(showContent ? 1 : 0)
         .offset(y: showContent ? 0 : 15)
+    }
+
+    private func featureRow(icon: String, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(theme.primary)
+
+            Text(text)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.white)
+        }
+    }
+
+    private func feedbackRow(text: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+                .padding(.top, 6)
+
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func drillRow(text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "dumbbell.fill")
+                .font(.system(size: 12))
+                .foregroundColor(theme.primary)
+                .padding(.top, 3)
+
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
@@ -800,15 +740,7 @@ private struct SkillCheckCommentCard: View {
             overallScore: 88,
             category: "Shooting",
             aiComment: "That wrist shot release is buttery smooth! You're out here making goalies look silly. Keep that top hand loose and you'll be unstoppable!",
-            premiumBreakdown: PremiumSkillBreakdown(
-                flowScore: 87,
-                confidenceScore: 91,
-                stylePoints: 84,
-                viralViewsEstimate: "25K+",
-                viralCaption: "That release was pure silk 🎯 | Beer league but make it highlight reel",
-                trashTalkLine: "Top cheese, where mama keeps the peanut butter",
-                signatureMoveName: "The Sniper Special"
-            ),
+            premiumBreakdown: .placeholder,
             videoURL: nil,
             analysisMetadata: VideoAnalysisMetadata(
                 videoDuration: 3.0,

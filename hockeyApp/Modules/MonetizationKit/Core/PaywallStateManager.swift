@@ -61,10 +61,10 @@ final class PaywallStateManager {
 
     /// Feature gate sources eligible for deal paywall
     /// These are the ACTUAL sources used by monetization gates in the app
+    /// Note: "equipment" (Stick Analyzer) removed - causes double paywall issue
     private let featureGateSources: Set<String> = [
         "ShotRaterView_AnalyzeButton",  // Shot Rater analyze button
-        "ai_coach",                     // AI Coach flow gate
-        "equipment"                     // Stick Analyzer (equipment) gate
+        "ai_coach"                      // AI Coach flow gate
     ]
 
     /// Sources that should NEVER show deal paywall

@@ -22,7 +22,8 @@ class SkillCheckService {
     /// Analyze any hockey skill from video
     /// - Parameters:
     ///   - videoURL: URL to the video file
-    static func analyzeSkill(videoURL: URL) async throws -> SkillAnalysisResult {
+    ///   - context: Optional user-provided context about the skill
+    static func analyzeSkill(videoURL: URL, context: SkillCheckContext? = nil) async throws -> SkillAnalysisResult {
 
         let startTime = Date()
 
@@ -37,8 +38,8 @@ class SkillCheckService {
         // Get video metadata
         let metadata = try await extractVideoMetadata(from: videoURL)
 
-        // Create analysis prompt
-        let prompt = createAnalysisPrompt()
+        // Create analysis prompt with context
+        let prompt = createAnalysisPrompt(context: context)
 
         // Use typed response parsing
         return try await withCheckedThrowingContinuation { continuation in
@@ -133,8 +134,9 @@ class SkillCheckService {
     // MARK: - Private Methods - Prompt Creation
 
     /// Create analysis prompt for generic skill evaluation
-    private static func createAnalysisPrompt() -> String {
-        return """
+    /// - Parameter context: Optional user-provided context for better analysis
+    private static func createAnalysisPrompt(context: SkillCheckContext? = nil) -> String {
+        var prompt = """
         Analyze this hockey video and provide a comprehensive evaluation of whatever skill is being demonstrated.
 
         The video could show any hockey skill including:
@@ -142,26 +144,37 @@ class SkillCheckService {
         - Stickhandling (dekes, puck control, hands)
         - Skating (speed, edges, transitions, stops)
         - Passing (tape-to-tape, saucer passes)
+        - Goaltending (positioning, saves, movement)
         - Defensive skills (stick checks, positioning)
         - Or any other hockey-related skill
 
-        Evaluate the following:
+        Provide the following:
 
-        1. **Category**: Identify what skill is being demonstrated (e.g., "stickhandling", "shooting", "skating", "passing")
-        2. **Overall Rating** (0-100): Holistic assessment of the skill execution quality
-        3. **AI Comment**: Write a fun, personalized 1-2 sentence comment from Greeny (the AI mascot) about what you observed. Be encouraging, a bit playful, and reference specific things you saw (equipment, technique, style, etc.). Think of it as Greeny hyping them up or giving them a friendly roast.
-        4. **Highlights** (3-5 items): Key strengths and positive observations from what you see in the video
-        5. **Tips** (3-5 items): Specific, actionable suggestions for improvement based on what you observe
+        1. **Category**: Identify what skill is being demonstrated (e.g., "wrist shot", "skating", "stickhandling")
 
-        IMPORTANT:
-        - Base all feedback on actual observations from the video
-        - Be specific about what you see (stick position, body mechanics, timing, etc.)
-        - Make the AI comment personal and engaging - reference visible details like jersey, location, style
-        - Provide actionable coaching advice that the player can implement
-        - Keep highlights and tips concise (1-2 sentences each)
-        - Return your analysis as valid JSON matching the schema
+        2. **Overall Rating** (0-100): Holistic assessment of skill execution quality. NEVER use multiples of 5 (not 70, 75, 80, etc). Use natural numbers like 73, 78, 82, 87, 91.
 
-        Focus on being helpful and constructive while identifying both strengths and areas for development.
+        3. **AI Comment**: A fun, personalized 1-2 sentence comment from Greeny (the AI mascot). Be encouraging and reference specific things you observed in the video.
+
+        4. **What You Did Well** (exactly 3 items): Specific positive observations about their technique. Be precise about what you see (e.g., "Great weight transfer from back to front foot", "Smooth stick flex on release"). Each item = 1 short sentence.
+
+        5. **What To Work On** (exactly 3 items): Specific areas for improvement. Be constructive and actionable (e.g., "Keep elbow higher during release", "Bend knees more for better power"). Each item = 1 short sentence.
+
+        6. **How To Improve** (exactly 3 items): Practical drills or exercises they can do to get better. Include the drill name and brief description (e.g., "Wall shots - 50 reps daily focusing on quick release", "Balance board stickhandling for stability"). Each item = 1 short sentence.
+
+        CRITICAL REQUIREMENTS:
+        - Base ALL feedback on actual observations from the video - don't make generic statements
+        - Be specific about technique (stick position, body mechanics, timing, weight transfer, etc.)
+        - Each array must have EXACTLY 3 items - no more, no less
+        - The feedback should work for ANY skill the user submits (shooting, skating, goalie, etc.)
+        - Return valid JSON matching the schema
         """
+
+        // Add user context if provided
+        if let context = context {
+            prompt += context.promptContext
+        }
+
+        return prompt
     }
 }

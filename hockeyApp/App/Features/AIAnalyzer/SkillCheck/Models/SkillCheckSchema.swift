@@ -21,24 +21,28 @@ extension SkillCheckSchema: AISchemaConvertible {
                 "category": SchemaBuilder.string(description: "Detected skill category (e.g., stickhandling, deke, shot, pass, skating)"),
                 "ai_comment": SchemaBuilder.string(description: "A fun, personalized comment from Greeny (the AI mascot) about the player's skill - should be encouraging, a bit cheeky, and reference specific things seen in the video. 1-2 sentences."),
 
-                // PREMIUM: STYLE METRICS
-                "flow_score": SchemaBuilder.integer(description: "How smooth and effortless the skill execution looks (0-100). Analyze fluidity, grace, coordination. High = buttery smooth, Low = choppy/forced. 🚨 NEVER USE MULTIPLES OF 5! Use 73, 78, 82, 87, 91, 96 - NOT 70, 75, 80, 85, 90, 95, 100", minimum: 0, maximum: 100),
-                "confidence_score": SchemaBuilder.integer(description: "Body language confidence during execution (0-100). Analyze posture, hesitation, commitment to the move. High = fearless/committed, Low = tentative. 🚨 NEVER USE MULTIPLES OF 5! Use 73, 78, 82, 87, 91, 96 - NOT 70, 75, 80, 85, 90, 95, 100", minimum: 0, maximum: 100),
-                "style_points": SchemaBuilder.integer(description: "Overall cool factor and aesthetic appeal (0-100). How good does it look regardless of effectiveness? High = highlight reel worthy, Low = functional but boring. 🚨 NEVER USE MULTIPLES OF 5! Use 73, 78, 82, 87, 91, 96 - NOT 70, 75, 80, 85, 90, 95, 100", minimum: 0, maximum: 100),
+                // PREMIUM: WHAT YOU DID WELL (3 items)
+                "what_you_did_well": SchemaBuilder.array(
+                    items: SchemaBuilder.string(description: "A specific positive observation about their technique or execution"),
+                    description: "EXACTLY 3 specific things the player did well. Be specific about what you observed (e.g., 'Great weight transfer from back to front foot', 'Smooth stick flex loading'). Each item = 1 short sentence. MUST have exactly 3 items."
+                ),
 
-                // PREMIUM: VIRAL POTENTIAL
-                "viral_views_estimate": SchemaBuilder.string(description: "Estimated TikTok/social views if posted (e.g., '15K+', '250K+', '1M+'). Base on execution quality, style, and wow-factor. Most skills: 5K-50K. Elite skills: 50K-500K. Insane skills: 500K+"),
-                "viral_caption": SchemaBuilder.string(description: "Ready-to-post viral caption for social media. Should be 1-2 sentences, use hockey slang, include relevant emojis (1-2 max), and make it screenshot-worthy. Reference the specific skill shown. Examples: 'That toe drag had him on skates 🔥 | Practice makes permanent' or 'Snipe show at the barn today 🎯 | Beer league but make it highlight reel'"),
+                // PREMIUM: WHAT TO WORK ON (3 items)
+                "what_to_work_on": SchemaBuilder.array(
+                    items: SchemaBuilder.string(description: "A specific area that needs improvement"),
+                    description: "EXACTLY 3 specific areas for improvement. Be constructive and specific (e.g., 'Keep elbow higher during release', 'Bend knees more for better power'). Each item = 1 short sentence. MUST have exactly 3 items."
+                ),
 
-                // PREMIUM: IDENTITY
-                "trash_talk_line": SchemaBuilder.string(description: "What you'd say after pulling off this move in a game. Should be cocky but playful, reference the skill, use hockey culture language. 1 sentence max. Examples: 'Buddy's ankles just filed for workers comp' or 'That's going on the highlight reel, boys' or 'Top cheese, where mama keeps the peanut butter'"),
-                "signature_move_name": SchemaBuilder.string(description: "Creative name for this specific execution/style. Should be 2-4 words, sound cool, reference what makes it unique. Examples: 'The Silky Mitts Special', 'Backhand Butter', 'Ankle Breaker 3000', 'Five Hole Sniper', 'The Dirty Dangle'"),
+                // PREMIUM: HOW TO IMPROVE (3 items)
+                "how_to_improve": SchemaBuilder.array(
+                    items: SchemaBuilder.string(description: "A specific drill or exercise to practice"),
+                    description: "EXACTLY 3 actionable drills or exercises to improve. Be practical (e.g., 'Practice wall shots focusing on quick release - 50 reps daily', 'Use a balance board while stickhandling'). Each item = 1 short sentence with drill name and brief description. MUST have exactly 3 items."
+                ),
 
                 "metadata": metadataObject
             ],
-            required: ["confidence", "overall_rating", "ai_comment", "flow_score", "confidence_score", "style_points", "viral_views_estimate", "viral_caption", "trash_talk_line", "signature_move_name", "metadata"],
-            description: "Hockey skill analysis with viral-optimized premium content"
+            required: ["confidence", "overall_rating", "ai_comment", "what_you_did_well", "what_to_work_on", "how_to_improve", "metadata"],
+            description: "Hockey skill analysis with actionable improvement feedback"
         )
     }
 }
-

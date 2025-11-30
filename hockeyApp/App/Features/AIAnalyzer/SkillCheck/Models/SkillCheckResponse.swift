@@ -7,18 +7,10 @@ struct SkillCheckResponse: Codable {
     let category: String?
     let aiComment: String  // Greeny's personalized comment
 
-    // PREMIUM: Style Metrics
-    let flowScore: Int
-    let confidenceScore: Int
-    let stylePoints: Int
-
-    // PREMIUM: Viral Potential
-    let viralViewsEstimate: String
-    let viralCaption: String
-
-    // PREMIUM: Identity
-    let trashTalkLine: String
-    let signatureMoveName: String
+    // PREMIUM: Actionable Feedback
+    let whatYouDidWell: [String]    // 3 specific positives
+    let whatToWorkOn: [String]      // 3 areas to improve
+    let howToImprove: [String]      // 3 drills/exercises
 
     let metadata: Metadata
 
@@ -33,39 +25,47 @@ struct SkillCheckResponse: Codable {
         case overall_rating
         case category
         case aiComment = "ai_comment"
-        case flowScore = "flow_score"
-        case confidenceScore = "confidence_score"
-        case stylePoints = "style_points"
-        case viralViewsEstimate = "viral_views_estimate"
-        case viralCaption = "viral_caption"
-        case trashTalkLine = "trash_talk_line"
-        case signatureMoveName = "signature_move_name"
+        case whatYouDidWell = "what_you_did_well"
+        case whatToWorkOn = "what_to_work_on"
+        case howToImprove = "how_to_improve"
         case metadata
     }
 
     /// Premium breakdown as structured model
     var premiumBreakdown: PremiumSkillBreakdown {
         PremiumSkillBreakdown(
-            flowScore: flowScore,
-            confidenceScore: confidenceScore,
-            stylePoints: stylePoints,
-            viralViewsEstimate: viralViewsEstimate,
-            viralCaption: viralCaption,
-            trashTalkLine: trashTalkLine,
-            signatureMoveName: signatureMoveName
+            whatYouDidWell: whatYouDidWell,
+            whatToWorkOn: whatToWorkOn,
+            howToImprove: howToImprove
         )
     }
 }
 
 // MARK: - Premium Skill Breakdown Model
-/// Structured model for premium skill breakdown
+/// Structured model for premium skill breakdown - actionable improvement feedback
 struct PremiumSkillBreakdown: Codable, Equatable {
-    let flowScore: Int
-    let confidenceScore: Int
-    let stylePoints: Int
-    let viralViewsEstimate: String
-    let viralCaption: String
-    let trashTalkLine: String
-    let signatureMoveName: String
-}
+    let whatYouDidWell: [String]    // 3 specific positives
+    let whatToWorkOn: [String]      // 3 areas to improve
+    let howToImprove: [String]      // 3 drills/exercises
 
+    /// Placeholder for preview/testing
+    static var placeholder: PremiumSkillBreakdown {
+        PremiumSkillBreakdown(
+            whatYouDidWell: [
+                "Great weight transfer from back to front foot",
+                "Smooth stick flex loading on the release",
+                "Good follow-through toward the target"
+            ],
+            whatToWorkOn: [
+                "Keep your elbow higher during the release",
+                "Bend your knees more for increased power",
+                "Shift weight forward slightly earlier"
+            ],
+            howToImprove: [
+                "Wall shots - 50 reps daily focusing on quick release",
+                "One-knee wrist shots to isolate upper body mechanics",
+                "Target practice with four corners drill"
+            ]
+        )
+    }
+}

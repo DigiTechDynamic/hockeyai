@@ -447,15 +447,13 @@ public struct MediaUploadView: View {
                                 .background(Circle().fill(Color.black.opacity(0.5)))
                         }
                         
-                        // Replace video button (bottom-left)
+                        // Bottom buttons row (Replace + Trim)
                         VStack {
                             Spacer()
                             HStack {
+                                // Replace button (left)
                                 Button(action: {
                                     print("🚨 [MediaUploadView] Replace button tapped - clearing video")
-                                    
-                                    // Just clear the video - don't immediately show picker
-                                    // This returns to showing "Add Video" button
                                     removeMedia()
                                 }) {
                                     HStack(spacing: 4) {
@@ -472,9 +470,33 @@ public struct MediaUploadView: View {
                                             .fill(Color.black.opacity(0.6))
                                     )
                                 }
-                                .padding(16)
+
                                 Spacer()
+
+                                // Trim button (right) - only show when trimmer is available
+                                Button(action: {
+                                    print("🚨 [MediaUploadView] Trim button tapped")
+                                    if let url = selectedVideoURL {
+                                        trimmerVideoURL = url
+                                        showFullScreenTrimmer = true
+                                    }
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "scissors")
+                                            .font(.system(size: 14))
+                                        Text("Trim")
+                                            .font(.system(size: 14, weight: .medium))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.black.opacity(0.6))
+                                    )
+                                }
                             }
+                            .padding(16)
                         }
                     }
                     .accessibilityLabel("Video preview. Tap to play.")
@@ -588,16 +610,20 @@ public struct MediaUploadView: View {
                             }
                         }
                     } else {
-                        // Normal flow - set the video and close
-                        await MainActor.run {
-                            self.selectedVideoURL = url
-                            self.generateVideoThumbnail(from: url)
-                            self.onMediaSelected?(.video, url)
+                        // Normal flow (no trimmer) - still check duration
+                        let ok = await self.checkVideoDuration(url: url)
+                        if ok {
+                            await MainActor.run {
+                                self.selectedVideoURL = url
+                                self.generateVideoThumbnail(from: url)
+                                self.onMediaSelected?(.video, url)
+                            }
                         }
+                        // If not ok, checkVideoDuration already showed alert
                     }
                 }
             }
-            
+
         case .videoLibrary:
             PermissionAwareMediaPicker.videoLibrary { url in
                 // Process URL completely off main thread to avoid AX blocking
@@ -648,18 +674,22 @@ public struct MediaUploadView: View {
                             }
                         }
                     } else {
-                        // Normal flow - set the video and close
-                        await MainActor.run {
-                            self.selectedVideoURL = url
-                            self.generateVideoThumbnail(from: url)
-                            self.onMediaSelected?(.video, url)
+                        // Normal flow (no trimmer) - still check duration
+                        let ok = await self.checkVideoDuration(url: url)
+                        if ok {
+                            await MainActor.run {
+                                self.selectedVideoURL = url
+                                self.generateVideoThumbnail(from: url)
+                                self.onMediaSelected?(.video, url)
+                            }
                         }
+                        // If not ok, checkVideoDuration already showed alert
                     }
                 }
             }
         }
     }
-    
+
     // MARK: - Helper Methods
     private func handleTrimmedVideo(_ trimmedURL: URL?) {
         print("🚨 [MediaUploadView] Trimmer completed with URL: \(String(describing: trimmedURL))")

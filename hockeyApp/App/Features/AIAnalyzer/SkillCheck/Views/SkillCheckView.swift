@@ -1,7 +1,9 @@
 import SwiftUI
 
 // MARK: - Skill Check View
-/// Main container view for Skill Check flow - simplified, no skill type selection
+/// Main container view for Skill Check flow
+/// SIMPLIFIED FLOW: Video + Context → Processing → Results
+/// Key insight: Get video first, ask questions after (like Wrestle AI)
 struct SkillCheckView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.theme) var theme
@@ -28,6 +30,7 @@ struct SkillCheckView: View {
                 if let stage = flowState.currentStage {
                     switch stage.id {
                     case "video-capture":
+                        // Use existing capture view with preview
                         skillCaptureView(flowState: flowState)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -73,36 +76,18 @@ struct SkillCheckView: View {
                 }
             }
             .onDisappear {
-                // Clean up videos when view disappears
                 viewModel.reset()
                 analysisTask?.cancel()
                 analysisTask = nil
             }
-            // Proactively cancel work if header Cancel is tapped
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AIFlowCancel"))) { _ in
-                // Cancel active network requests
                 AIAnalysisFacade.cancelActiveRequests()
-
-                // Cancel local tasks
                 analysisTask?.cancel()
                 analysisTask = nil
-
                 viewModel.reset()
                 dismiss()
             }
-            // Note: Funnel tracking now handled in individual views
-            // - Started: SkillCheckView.onAppear
-            // - Video selected: skillCaptureView callback
-            // - Analyzing: skillAnalysisView.onAppear
-            // - Results viewed: SkillCheckResultsView.onAppear
-            // - Elite breakdown clicked: SkillCheckResultsView.unlockPremium
-            // - Elite breakdown unlocked: SkillCheckResultsView.checkPremiumStatus
-            .onAppear {
-                // Track funnel start (Step 1)
-                SkillCheckAnalytics.trackStarted(source: "skill_check_home")
-            }
         }
-        // Ensure cellular banner renders above the flow container
         .overlay(
             GlobalPresentationLayer()
                 .environmentObject(NoticeCenter.shared)
@@ -119,27 +104,24 @@ struct SkillCheckView: View {
         )
     }
 
-    // MARK: - Stage Views
-
+    // MARK: - Video Capture View (Simplified)
     private func skillCaptureView(flowState: AIFlowState) -> some View {
-        SkillCheckCaptureView(
-            capturedVideoURL: .constant(nil),
-            onVideoCaptured: { url in
-                // Track video selected & trimmed (Steps 2-4 happen in MediaCaptureKit)
-                // We track completion here as a single step
-                SkillCheckAnalytics.trackVideoSelected(source: "library") // TODO: Track actual source
+        SkillCheckVideoCaptureView(
+            onVideoCaptured: { url, context in
+                // Track video selected
+                SkillCheckAnalytics.trackVideoSelected(source: "capture")
 
-                // Free analysis - no paywall gate
+                // Store the video and context, proceed to analysis
                 viewModel.setCapturedVideo(url)
+                viewModel.setContext(context)
                 flowState.setData(url, for: "captured-video")
-
-                // Skip validation, proceed directly to analysis
+                flowState.setData(context, for: "skill-context")
                 flowState.proceed()
 
-                // Start analysis immediately
+                // Start analysis with context
                 analysisTask?.cancel()
                 let task = Task { @MainActor in
-                    await viewModel.analyzeSkill(videoURL: url)
+                    await viewModel.analyzeSkill(videoURL: url, context: context)
                 }
                 analysisTask = task
             }
@@ -149,7 +131,6 @@ struct SkillCheckView: View {
     private func skillAnalysisView(flowState: AIFlowState) -> some View {
         SkillCheckProcessingView()
             .onAppear {
-                // Track analyzing (Step 5)
                 SkillCheckAnalytics.trackAnalyzing()
             }
             .onReceive(viewModel.$analysisResult) { result in
@@ -173,7 +154,6 @@ struct SkillCheckView: View {
     }
 
     private func handleMonetizationGranted() {
-        print("GRANTED - Proceed with AI analysis")
         shouldActivateGate = false
         let action = pendingMonetizedAction
         pendingMonetizedAction = nil
@@ -187,43 +167,39 @@ struct SkillCheckView: View {
         shouldActivateGate = false
         gateTriggerId = UUID().uuidString
         pendingMonetizedAction = nil
-        print("User cancelled or error: \(error ?? "none")")
     }
-
-    // MARK: - Funnel Tracking
-    // Tracking now handled in individual view components via SkillCheckAnalytics
 }
 
 // MARK: - Skill Check Flow Definition
-/// Flow definition for Skill Check using AIFlowContainer
+/// Simplified flow: Video + Context → Processing → Results
 struct SkillCheckFlowDefinition: AIFlowDefinition {
     let id = "skill-check"
     let name = "Skill Check"
     let allowsBackNavigation = true
-    let showsProgress = true
+    let showsProgress = true // Show progress bar
 
     var stages: [any AIFlowStage] {
         var stageList: [any AIFlowStage] = []
 
-        // Video Capture (no selection needed)
+        // Video Capture with Context Questions (single screen)
         stageList.append(
             MediaCaptureStage(
                 id: "video-capture",
-                title: "Record Skill",
+                title: "Skill Check",
                 subtitle: "",
                 mediaTypes: [.video],
                 maxItems: 1,
                 minItems: 1,
-                instructions: "Record any hockey skill you want analyzed",
+                instructions: "",
                 maxVideos: 1
             )
         )
 
-        // Analysis Stage (validation removed for faster processing)
+        // Analysis Stage
         stageList.append(
             ProcessingStage(
                 id: "analysis",
-                title: "Analyzing Skill",
+                title: "Analyzing",
                 subtitle: "",
                 processingMessage: "AI is evaluating your technique...",
                 showsHeader: true,
@@ -235,7 +211,7 @@ struct SkillCheckFlowDefinition: AIFlowDefinition {
         stageList.append(
             ResultsStage(
                 id: "results",
-                title: "Analysis Complete",
+                title: "Results",
                 subtitle: ""
             )
         )
@@ -259,6 +235,22 @@ struct SkillCheckFlowDefinition: AIFlowDefinition {
         }
 
         return stages[currentIndex - 1]
+    }
+}
+
+// MARK: - Generic Stage (for Hero)
+struct GenericStage: AIFlowStage {
+    let id: String
+    let title: String
+    let subtitle: String
+    let showsHeader: Bool
+
+    var isRequired: Bool { true }
+    var canSkip: Bool { false }
+    var canGoBack: Bool { true }
+
+    func validate(data: Any?) -> AIValidationResult {
+        AIValidationResult(isValid: true, errors: [])
     }
 }
 

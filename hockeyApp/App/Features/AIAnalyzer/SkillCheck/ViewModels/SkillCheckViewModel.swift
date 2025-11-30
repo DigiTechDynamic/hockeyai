@@ -14,6 +14,7 @@ class SkillCheckViewModel: ObservableObject {
     @Published var validationResult: AIValidationService.ValidationResponse?
     @Published var currentError: AIAnalyzerError?
     @Published var showError = false
+    @Published var skillContext: SkillCheckContext?
 
     // MARK: - Private Properties
     private let videoManager = VideoStorageManager.shared
@@ -41,6 +42,10 @@ class SkillCheckViewModel: ObservableObject {
         videoManager.updateManagedVideo(current: &trimmedVideoURL, new: url)
     }
 
+    func setContext(_ context: SkillCheckContext) {
+        skillContext = context
+    }
+
     func startAnalysis() {
         guard let videoURL = trimmedVideoURL ?? capturedVideoURL else {
             handleError(AIAnalyzerError.aiProcessingFailed("No video available for analysis"))
@@ -53,12 +58,12 @@ class SkillCheckViewModel: ObservableObject {
         showError = false
 
         Task {
-            await analyzeSkill(videoURL: videoURL)
+            await analyzeSkill(videoURL: videoURL, context: skillContext)
         }
     }
 
-    /// Analyze a skill after validation - called from flow
-    func analyzeSkill(videoURL: URL) async {
+    /// Analyze a skill with optional context - called from flow
+    func analyzeSkill(videoURL: URL, context: SkillCheckContext? = nil) async {
         processingState = .analyzing
 
         // Haptic feedback when AI analysis starts
@@ -67,7 +72,7 @@ class SkillCheckViewModel: ObservableObject {
         }
 
         do {
-            let result = try await SkillCheckService.analyzeSkill(videoURL: videoURL)
+            let result = try await SkillCheckService.analyzeSkill(videoURL: videoURL, context: context)
             analysisResult = result
             processingState = .idle
 
@@ -95,6 +100,7 @@ class SkillCheckViewModel: ObservableObject {
         validationResult = nil
         currentError = nil
         showError = false
+        skillContext = nil
     }
 
     // MARK: - Private Methods

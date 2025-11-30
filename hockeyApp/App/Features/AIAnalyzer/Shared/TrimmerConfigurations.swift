@@ -40,13 +40,13 @@ public extension VideoTrimmerConfig {
         )
     }
     
-    /// Configuration for Skill Check - allows up to 5 seconds for various skills
+    /// Configuration for Skill Check - allows up to 10 seconds for various skills
     static func skillCheck() -> VideoTrimmerConfig {
         VideoTrimmerConfig(
             title: "Trim Video",
-            subtitle: "Select a clip (5 seconds or less)",
+            subtitle: "Select a clip (10 seconds or less)",
             minDuration: 0.5,
-            maxDuration: 5.0,
+            maxDuration: 10.0,
             buttonTitle: "Use Clip",
             validationMessage: "Perfect!"
         )

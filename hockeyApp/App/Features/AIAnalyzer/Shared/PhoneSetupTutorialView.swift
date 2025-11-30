@@ -5,6 +5,7 @@ enum TutorialFlowContext {
     case aiCoach
     case shotRater
     case stickAnalyzer
+    case skillCheck
     case standalone
 }
 
