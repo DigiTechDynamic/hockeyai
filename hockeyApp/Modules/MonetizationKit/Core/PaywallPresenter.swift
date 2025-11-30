@@ -17,7 +17,6 @@ struct PaywallPresenter: View {
     @State private var isLoading = true
     @State private var purchaseInProgress = false
     @State private var showFreeTrial = false // Toggle state for trial
-    @State private var showDealPaywall = false // Show deal paywall on dismiss
 
     var body: some View {
         ZStack {
@@ -82,14 +81,6 @@ struct PaywallPresenter: View {
                 eventName: MonetizationConfig.paywallViewedEvent,
                 properties: ["variant": variant, "source": source]
             )
-        }
-        .fullScreenCover(isPresented: $showDealPaywall, onDismiss: {
-            // After deal paywall closes, dismiss the parent paywall too
-            dismiss()
-        }) {
-            // Show deal paywall (hockey_deal variant)
-            PaywallPresenter(source: "deal_recovery_\(source)")
-                .preferredColorScheme(.dark)
         }
         .onChange(of: scenePhase) { newPhase in
             // Handle interrupted purchases - re-check premium status when app returns to foreground
@@ -202,19 +193,8 @@ struct PaywallPresenter: View {
 
     private func handleDismiss() {
         trackDismiss()
-
-        // Check if we should show deal paywall before dismissing
-        let stateManager = PaywallStateManager.shared
-        stateManager.recordDismissal(source: source)
-
-        if stateManager.shouldShowDealPaywall(source: source, action: .dismissed) {
-            print("[PaywallPresenter] 💰 Showing deal paywall after dismissal at '\(source)'")
-            stateManager.recordDealPaywallShown(source: source)
-            showDealPaywall = true
-        } else {
-            print("[PaywallPresenter] ↩️ No deal paywall - dismissing")
-            dismiss()
-        }
+        PaywallStateManager.shared.recordDismissal(source: source)
+        dismiss()
     }
 
     // MARK: - Trial Toggle Helpers

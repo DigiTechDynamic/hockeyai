@@ -1,6 +1,28 @@
 import SwiftUI
 
-// Shared, theme-aligned components for all paywalls
+// MARK: - Shared Paywall Components
+
+/// Reusable benefit row for paywalls
+struct PaywallBenefitRow: View {
+    let icon: String
+    let text: String
+    var color: Color = Color(hex: "#39FF14")
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(color)
+                .frame(width: 24, height: 24)
+
+            Text(text)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color.white.opacity(0.95))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
 
 struct PaywallHeaderBar: View {
     @Environment(\.theme) var theme

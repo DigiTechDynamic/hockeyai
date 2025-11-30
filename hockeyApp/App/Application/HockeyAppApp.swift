@@ -8,7 +8,7 @@ import Mixpanel
 struct SnapHockey: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var monetization = MonetizationContainer.shared.monetizationManager
+    @StateObject private var monetization = MonetizationManager.shared
 
     init() {
         // Centralized app initialization
@@ -32,7 +32,10 @@ struct SnapHockey: App {
             print("[Analytics] Mixpanel token missing – skipping initialization")
         }
         // Align Mixpanel distinctId with RevenueCat appUserID
-        AnalyticsManager.shared.syncRevenueCatIdentity()
+        // Wait for RevenueCat to fully initialize before syncing identity
+        Purchases.shared.getCustomerInfo { _, _ in
+            AnalyticsManager.shared.syncRevenueCatIdentity()
+        }
 
         #if DEBUG
         // Suppress accessibility debug warnings that don't affect functionality

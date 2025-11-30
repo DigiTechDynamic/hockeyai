@@ -173,20 +173,18 @@ final class FirebaseRemoteConfigManager {
     }
 
     /// Get or create a unique device identifier for consistent variant assignment
+    /// Uses shared key with PaywallRegistry to ensure consistent A/B assignments
     private func getDeviceIdentifier() -> String {
-        let key = "firebase_remote_config_device_id"
+        let key = "paywall_device_id" // Shared with PaywallRegistry
         if let existingID = UserDefaults.standard.string(forKey: key) {
             return existingID
         }
 
-        // Generate truly random ID using UUID + timestamp to avoid hash collisions
-        // This ensures different A/B test assignments on fresh installs
-        let timestamp = Int(Date().timeIntervalSince1970 * 1000) // milliseconds
-        let newID = "\(UUID().uuidString)-\(timestamp)"
+        let newID = UUID().uuidString
         UserDefaults.standard.set(newID, forKey: key)
 
         #if DEBUG
-        print("[FirebaseRemoteConfig] 🆕 Generated new device ID: \(newID)")
+        print("[FirebaseRemoteConfig] Generated new device ID: \(newID)")
         #endif
 
         return newID
@@ -232,7 +230,7 @@ final class FirebaseRemoteConfigManager {
         userAssignedVariant = nil
 
         // Clear device ID to get a fresh assignment on next call
-        let key = "firebase_remote_config_device_id"
+        let key = "paywall_device_id"
         UserDefaults.standard.removeObject(forKey: key)
 
         #if DEBUG

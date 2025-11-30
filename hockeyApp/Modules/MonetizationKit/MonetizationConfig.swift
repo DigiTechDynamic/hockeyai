@@ -1,6 +1,11 @@
 import Foundation
 
 struct MonetizationConfig {
+    // MARK: - RevenueCat Configuration
+
+    /// The entitlement identifier for premium access in RevenueCat
+    static let premiumEntitlementID = "pro"
+
     // MARK: - Paywall Configuration
     struct PaywallConfig {
         let id: String
@@ -134,11 +139,6 @@ struct MonetizationConfig {
         "ShotRaterView_AnalyzeButton": "paywall_50yr_trial_5wk",
         "onboarding": "paywall_50yr_trial_5wk"  // Default onboarding to $50/yr trial variant (with trial)
     ]
-
-    // Special: Deal recovery sources (dynamically matched)
-    static func isDealRecoverySource(_ source: String) -> Bool {
-        return source.hasPrefix("deal_recovery_")
-    }
 
     static var defaultDebugSource: String {
         "paywall_50yr_trial_5wk_test"

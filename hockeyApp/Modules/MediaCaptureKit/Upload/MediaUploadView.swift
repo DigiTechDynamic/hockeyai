@@ -337,7 +337,6 @@ public struct MediaUploadView: View {
             Text(errorMessage)
         }
         .onChange(of: activeSheet) { oldValue, newValue in
-            print("🚨 [MediaUploadView] activeSheet changed from \(String(describing: oldValue)) to \(String(describing: newValue))")
             handleSheetDismissal(newValue)
         }
         .onAppear {
@@ -453,7 +452,6 @@ public struct MediaUploadView: View {
                             HStack {
                                 // Replace button (left)
                                 Button(action: {
-                                    print("🚨 [MediaUploadView] Replace button tapped - clearing video")
                                     removeMedia()
                                 }) {
                                     HStack(spacing: 4) {
@@ -475,7 +473,6 @@ public struct MediaUploadView: View {
 
                                 // Trim button (right) - only show when trimmer is available
                                 Button(action: {
-                                    print("🚨 [MediaUploadView] Trim button tapped")
                                     if let url = selectedVideoURL {
                                         trimmerVideoURL = url
                                         showFullScreenTrimmer = true
@@ -520,7 +517,6 @@ public struct MediaUploadView: View {
         AppButton(
             title: configuration.buttonTitle,
             action: {
-                print("🚨 [MediaUploadView] Upload button tapped")
                 handleUploadTap()
             },
             style: .primary,
@@ -564,8 +560,7 @@ public struct MediaUploadView: View {
             PermissionAwareMediaPicker.videoCamera { url in
                 // Process URL completely off main thread to avoid AX blocking
                 Task.detached(priority: .userInitiated) {
-                    print("🚨 [MediaUploadView] Video camera returned URL: \(String(describing: url))")
-                    
+                                        
                     guard let url = url else {
                         // User cancelled - hide loading
                         await MainActor.run {
@@ -590,8 +585,7 @@ public struct MediaUploadView: View {
                             // Small delay to let camera fully dismiss and AX settle
                             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
                             await MainActor.run {
-                                print("🚨 [MediaUploadView] Showing trimmer after preflight")
-                                // Cancel timeout - video loaded successfully
+                                                                // Cancel timeout - video loaded successfully
                                 self.processingTimeoutTask?.cancel()
                                 self.processingTimeoutTask = nil
                                 
@@ -628,8 +622,7 @@ public struct MediaUploadView: View {
             PermissionAwareMediaPicker.videoLibrary { url in
                 // Process URL completely off main thread to avoid AX blocking
                 Task.detached(priority: .userInitiated) {
-                    print("🚨 [MediaUploadView] Video library picker returned URL: \(String(describing: url))")
-                    
+                                        
                     guard let url = url else {
                         // User cancelled - hide loading
                         await MainActor.run {
@@ -654,8 +647,7 @@ public struct MediaUploadView: View {
                             // Small delay to let picker fully dismiss and AX settle
                             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
                             await MainActor.run {
-                                print("🚨 [MediaUploadView] Showing trimmer after preflight")
-                                // Cancel timeout - video loaded successfully
+                                                                // Cancel timeout - video loaded successfully
                                 self.processingTimeoutTask?.cancel()
                                 self.processingTimeoutTask = nil
                                 
@@ -692,8 +684,7 @@ public struct MediaUploadView: View {
 
     // MARK: - Helper Methods
     private func handleTrimmedVideo(_ trimmedURL: URL?) {
-        print("🚨 [MediaUploadView] Trimmer completed with URL: \(String(describing: trimmedURL))")
-        DispatchQueue.main.async {
+                DispatchQueue.main.async {
             self.showFullScreenTrimmer = false
             self.trimmerVideoURL = nil
             self.isProcessingSelection = false
@@ -703,8 +694,7 @@ public struct MediaUploadView: View {
                 self.generateVideoThumbnail(from: finalURL)
                 self.onMediaSelected?(.video, finalURL)
             } else {
-                print("🚨 [MediaUploadView] Trimmer cancelled or failed")
-            }
+                            }
         }
     }
     
@@ -713,11 +703,9 @@ public struct MediaUploadView: View {
     }
     
     private func handleUploadTap() {
-        print("🚨 [MediaUploadView] Handling upload tap - hasMedia: \(hasMedia), showTrimmerImmediately: \(configuration.showTrimmerImmediately), isProcessing: \(isProcessingSelection), activeSheet: \(String(describing: activeSheet))")
-        
+                
         // Prevent re-entrant calls while processing a selection or if sheet is already shown
         guard !isProcessingSelection && activeSheet == nil else {
-            print("🚨 [MediaUploadView] Ignoring upload tap - already processing selection or sheet is active")
             return
         }
         
@@ -786,8 +774,7 @@ public struct MediaUploadView: View {
     }
     
     private func handleSheetDismissal(_ newValue: ActiveSheet?) {
-        print("🚨 [MediaUploadView] Sheet dismissed, newValue: \(String(describing: newValue)), previousSheet: \(String(describing: previousSheet)), isProcessing: \(isProcessingSelection)")
-
+        
         // Cancel any pending timeout
         processingTimeoutTask?.cancel()
         processingTimeoutTask = nil
@@ -797,8 +784,7 @@ public struct MediaUploadView: View {
 
         // Reset processing flags when sheet is fully dismissed
         if newValue == nil {
-            print("🚨 [MediaUploadView] Sheet fully dismissed - was video sheet: \(wasVideoSheet), expecting selection: \(isExpectingVideoSelection)")
-
+            
             // If a video picker/camera was just dismissed and we're expecting a selection,
             // give the callback a very short time to fire
             if isExpectingVideoSelection && wasVideoSheet {
@@ -812,8 +798,7 @@ public struct MediaUploadView: View {
                 // If we don't have media after dismissal and nothing is pending,
                 // reset all processing states immediately
                 if selectedVideoURL == nil && selectedImage == nil {
-                    print("🚨 [MediaUploadView] No media selected, resetting all state")
-                    resetProcessingState()
+                                        resetProcessingState()
                 }
             }
         }
@@ -823,8 +808,7 @@ public struct MediaUploadView: View {
     }
     
     private func resetProcessingState() {
-        print("🚨 [MediaUploadView] Resetting all processing state")
-        showProcessingOverlay = false
+                showProcessingOverlay = false
         isProcessingSelection = false
         isExpectingVideoSelection = false
         processingMessage = "Preparing video editor..."
@@ -860,8 +844,7 @@ public struct MediaUploadView: View {
     }
     
     private func removeMedia() {
-        print("🚨 [MediaUploadView] removeMedia called - clearing all media state")
-        selectedImage = nil
+                selectedImage = nil
         selectedVideoURL = nil
         videoThumbnail = nil
         videoAspectRatio = nil

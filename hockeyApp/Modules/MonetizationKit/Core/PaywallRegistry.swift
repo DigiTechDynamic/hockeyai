@@ -30,14 +30,6 @@ final class PaywallRegistry {
     // MARK: - Design Selection
 
     static func getDesign(for source: String) -> PaywallDesign {
-        // Special case: Deal recovery always shows hockey_deal
-        if MonetizationConfig.isDealRecoverySource(source) {
-            print("[PaywallRegistry] 💰 Deal recovery source detected - forcing hockey_deal variant")
-            if let design = designs["hockey_deal"] {
-                return design
-            }
-        }
-
         // Resolve alias for assignment so multiple sources can share a single variant
         let assignmentSource = MonetizationConfig.assignmentSource(for: source)
 

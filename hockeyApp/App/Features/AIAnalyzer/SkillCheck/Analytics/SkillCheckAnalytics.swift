@@ -103,19 +103,7 @@ enum SkillCheckAnalytics {
     ///   - tier: The tier assigned
     ///   - category: Type of skill
     static func trackEliteBreakdownUnlocked(score: Int, tier: String, category: String?) {
-        AnalyticsManager.shared.trackFunnelStep(
-            funnel: "skill_check",
-            step: "elite_breakdown_unlocked",
-            stepNumber: 5,
-            totalSteps: 5,
-            metadata: [
-                "score": score,
-                "tier": tier,
-                "category": category ?? "unknown",
-                "premium_unlocked": true
-            ]
-        )
-
+        // Track funnel completion (Step 5 = final step, so use trackFunnelCompleted)
         AnalyticsManager.shared.trackFunnelCompleted(
             funnel: "skill_check",
             totalSteps: 5,
@@ -189,7 +177,7 @@ enum SkillCheckAnalytics {
             funnel: "skill_check",
             step: step,
             stepNumber: getStepNumber(for: step),
-            totalSteps: 6,
+            totalSteps: 5,
             reason: "user_abandoned"
         )
 
