@@ -3,7 +3,7 @@ import AVFoundation
 
 // MARK: - Skill Check Video Capture View
 /// Single screen for video capture + context questions
-/// Flow: Upload video → Answer context questions → Continue
+/// Flow: Pick skill (or type custom) → Upload video → Continue
 struct SkillCheckVideoCaptureView: View {
     @Environment(\.theme) var theme
 
@@ -11,8 +11,38 @@ struct SkillCheckVideoCaptureView: View {
 
     @State private var videoURL: URL?
     @State private var videoDuration: Double = 0
-    @State private var userRequest: String = ""
+    @State private var selectedSkill: String? = nil
+    @State private var customRequest: String = ""
+    @State private var showCustomField: Bool = false
+    @State private var focusArea: String = "" // Optional: what to pay attention to
     @FocusState private var isTextFieldFocused: Bool
+    @FocusState private var isFocusFieldFocused: Bool
+
+    // Skill categories
+    private let skills = [
+        ["Wrist shot", "Slap shot", "Snapshot"],
+        ["Skating", "Stickhandling", "Passing"],
+        ["Backhand", "Deking", "Defense"],
+        ["Goalie", "One-timer", "Faceoffs"]
+    ]
+
+    /// The final user request to send to AI (combines skill + optional focus)
+    private var userRequest: String {
+        var request: String
+
+        if showCustomField && !customRequest.isEmpty {
+            request = customRequest
+        } else {
+            request = selectedSkill ?? ""
+        }
+
+        // Append focus area if provided
+        if !focusArea.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            request += ". Focus on: \(focusArea)"
+        }
+
+        return request
+    }
 
     var body: some View {
         ZStack {
@@ -21,48 +51,14 @@ struct SkillCheckVideoCaptureView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: theme.spacing.lg) {
-                        // Header
-                        challengeHeader
+                        // AI Feedback Explanation Card
+                        aiExplanationCard
 
-                        // User Request Text Field
-                        userRequestField
+                        // Step 1: Skill Selection
+                        stepOneSkillSection
 
-                        // Media Upload Card
-                        MediaUploadView(
-                            configuration: MediaUploadView.Configuration(
-                                title: videoURL == nil ? "Your Video" : "Video Ready",
-                                description: "",
-                                instructions: videoURL == nil ? "Record or upload a clip\nAI insights in seconds" : "",
-                                mediaType: .video,
-                                buttonTitle: "Add Video",
-                                showSourceSelector: true,
-                                showTrimmerImmediately: false,
-                                preCameraGuideBuilder: { onComplete in
-                                    AnyView(
-                                        PhoneSetupTutorialView(flowContext: .skillCheck) { _ in
-                                            onComplete()
-                                        }
-                                    )
-                                },
-                                primaryColor: theme.primary,
-                                backgroundColor: theme.background,
-                                surfaceColor: theme.surface,
-                                textColor: theme.text,
-                                textSecondaryColor: theme.textSecondary,
-                                successColor: theme.success,
-                                cornerRadius: theme.cornerRadius
-                            ),
-                            selectedVideoURL: $videoURL,
-                            featureType: .skillCheck
-                        ) { url in
-                            videoURL = url
-                            loadVideoDuration(from: url)
-                        }
-
-                        // Video duration info (only show when video is selected)
-                        if videoURL != nil && videoDuration > 0 {
-                            videoDurationCard
-                        }
+                        // Step 2: Video Upload
+                        stepTwoVideoSection
                     }
                     .padding(.horizontal, theme.spacing.lg)
                     .padding(.top, theme.spacing.md)
@@ -70,6 +66,7 @@ struct SkillCheckVideoCaptureView: View {
                 }
                 .onTapGesture {
                     isTextFieldFocused = false
+                    isFocusFieldFocused = false
                 }
 
                 // Bottom Continue button
@@ -82,38 +79,311 @@ struct SkillCheckVideoCaptureView: View {
         }
     }
 
-    // MARK: - Challenge Header
-    private var challengeHeader: some View {
-        VStack(spacing: 4) {
-            Text("What do you want feedback on?")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(theme.text)
-                .multilineTextAlignment(.center)
+    // MARK: - AI Explanation Card
+    private var aiExplanationCard: some View {
+        HStack(spacing: 14) {
+            // AI Icon
+            ZStack {
+                Circle()
+                    .fill(theme.primary.opacity(0.15))
+                    .frame(width: 44, height: 44)
 
-            Text("Any skill, any level - we'll analyze it")
-                .font(.system(size: 14, weight: .medium))
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(theme.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AI Skill Analysis")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(theme.text)
+
+                Text("Get personalized feedback on your technique. We'll analyze your form and show you exactly what to improve.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(theme.primary.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+
+    // MARK: - Step 1: Skill Selection
+    private var stepOneSkillSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Step header
+            HStack(spacing: 10) {
+                stepBadge(number: 1, isComplete: selectedSkill != nil || (showCustomField && !customRequest.isEmpty))
+
+                Text("What skill are you working on?")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(theme.text)
+            }
+
+            // Skill chips grid
+            VStack(spacing: 10) {
+                ForEach(skills, id: \.self) { row in
+                    HStack(spacing: 10) {
+                        ForEach(row, id: \.self) { skill in
+                            skillChip(skill)
+                        }
+                    }
+                }
+
+                // "Something else" chip - opens custom text field
+                somethingElseChip
+            }
+
+            // Custom text field (only shows when "Something else" is tapped)
+            if showCustomField {
+                customTextField
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Optional focus area (only shows after skill is selected)
+            if selectedSkill != nil && !showCustomField {
+                optionalFocusField
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showCustomField)
+        .animation(.easeInOut(duration: 0.25), value: selectedSkill)
+    }
+
+    // MARK: - Step Badge
+    private func stepBadge(number: Int, isComplete: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(isComplete ? theme.primary : theme.surface)
+                .frame(width: 28, height: 28)
+
+            if isComplete {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(theme.background)
+            } else {
+                Text("\(number)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(theme.textSecondary)
+            }
+        }
+        .overlay(
+            Circle()
+                .stroke(isComplete ? theme.primary : theme.textSecondary.opacity(0.3), lineWidth: 2)
+        )
+    }
+
+    // MARK: - Optional Focus Field
+    private var optionalFocusField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Anything specific? (optional)")
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(theme.textSecondary)
-                .multilineTextAlignment(.center)
+
+            TextField("", text: $focusArea, prompt: Text("e.g. release speed, accuracy, power...")
+                .foregroundColor(theme.textSecondary.opacity(0.5)))
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(theme.text)
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(theme.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isFocusFieldFocused ? theme.primary.opacity(0.5) : theme.textSecondary.opacity(0.2), lineWidth: 1.5)
+                        )
+                )
+                .focused($isFocusFieldFocused)
+                .submitLabel(.done)
+                .onSubmit {
+                    isFocusFieldFocused = false
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            isFocusFieldFocused = false
+                            isTextFieldFocused = false
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundColor(theme.primary)
+                    }
+                }
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - Step 2: Video Section
+    private var stepTwoVideoSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Step header
+            HStack(spacing: 10) {
+                stepBadge(number: 2, isComplete: videoURL != nil)
+
+                Text("Add your video")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(theme.text)
+            }
+
+            // Media Upload Card
+            MediaUploadView(
+                configuration: MediaUploadView.Configuration(
+                    title: videoURL == nil ? "Your Video" : "Video Ready",
+                    description: "",
+                    instructions: videoURL == nil ? "Record or upload a clip\nAI insights in seconds" : "",
+                    mediaType: .video,
+                    buttonTitle: "Add Video",
+                    showSourceSelector: true,
+                    showTrimmerImmediately: false,
+                    preCameraGuideBuilder: { onComplete in
+                        AnyView(
+                            PhoneSetupTutorialView(flowContext: .skillCheck) { _ in
+                                onComplete()
+                            }
+                        )
+                    },
+                    primaryColor: theme.primary,
+                    backgroundColor: theme.background,
+                    surfaceColor: theme.surface,
+                    textColor: theme.text,
+                    textSecondaryColor: theme.textSecondary,
+                    successColor: theme.success,
+                    cornerRadius: theme.cornerRadius
+                ),
+                selectedVideoURL: $videoURL,
+                featureType: .skillCheck
+            ) { url in
+                videoURL = url
+                loadVideoDuration(from: url)
+            }
+
+            // Video duration info (only show when video is selected)
+            if videoURL != nil && videoDuration > 0 {
+                videoDurationCard
+            }
         }
     }
 
-    // MARK: - User Request Field
-    private var userRequestField: some View {
+    // MARK: - Skill Chips (kept for reference)
+    private var skillChipsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Text field with placeholder
-            TextField("", text: $userRequest, prompt: Text("Describe what you want feedback on...\n\ne.g. \"Is my wrist shot release quick enough?\" or \"How's my skating form?\"")
+            // Skill chips grid
+            VStack(spacing: 10) {
+                ForEach(skills, id: \.self) { row in
+                    HStack(spacing: 10) {
+                        ForEach(row, id: \.self) { skill in
+                            skillChip(skill)
+                        }
+                    }
+                }
+
+                // "Something else" chip - opens custom text field
+                somethingElseChip
+            }
+
+            // Custom text field (only shows when "Something else" is tapped)
+            if showCustomField {
+                customTextField
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showCustomField)
+    }
+
+    private func skillChip(_ text: String) -> some View {
+        let isSelected = selectedSkill == text && !showCustomField
+
+        return Button(action: {
+            // Deselect if already selected
+            if selectedSkill == text && !showCustomField {
+                selectedSkill = nil
+            } else {
+                selectedSkill = text
+                showCustomField = false
+                customRequest = ""
+            }
+            HapticManager.shared.playImpact(style: .light)
+        }) {
+            Text(text)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(isSelected ? theme.background : theme.text)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? theme.primary : theme.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? theme.primary : theme.textSecondary.opacity(0.2), lineWidth: 1.5)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var somethingElseChip: some View {
+        Button(action: {
+            withAnimation {
+                showCustomField.toggle()
+                if showCustomField {
+                    selectedSkill = nil
+                    // Focus the text field after a brief delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        isTextFieldFocused = true
+                    }
+                } else {
+                    customRequest = ""
+                    isTextFieldFocused = false
+                }
+            }
+            HapticManager.shared.playImpact(style: .light)
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: showCustomField ? "xmark" : "plus")
+                    .font(.system(size: 12, weight: .bold))
+                Text(showCustomField ? "Cancel" : "Something else")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(showCustomField ? theme.text : theme.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(showCustomField ? theme.surface : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        showCustomField ? theme.primary : theme.textSecondary.opacity(0.3),
+                        style: StrokeStyle(lineWidth: 1.5, dash: showCustomField ? [] : [6, 4])
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var customTextField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("", text: $customRequest, prompt: Text("Describe what you want feedback on...")
                 .foregroundColor(theme.textSecondary.opacity(0.5)), axis: .vertical)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(theme.text)
-                .lineLimit(3...5)
+                .lineLimit(2...4)
                 .padding(16)
-                .frame(minHeight: 100)
                 .background(
-                    RoundedRectangle(cornerRadius: theme.cornerRadius)
+                    RoundedRectangle(cornerRadius: 14)
                         .fill(theme.surface)
                         .overlay(
-                            RoundedRectangle(cornerRadius: theme.cornerRadius)
-                                .stroke(isTextFieldFocused ? theme.primary : theme.textSecondary.opacity(0.3), lineWidth: isTextFieldFocused ? 2 : 1)
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(theme.primary, lineWidth: 2)
                         )
                 )
                 .focused($isTextFieldFocused)
@@ -121,69 +391,22 @@ struct SkillCheckVideoCaptureView: View {
                 .onSubmit {
                     isTextFieldFocused = false
                 }
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") {
-                            isTextFieldFocused = false
-                        }
-                        .fontWeight(.semibold)
-                        .foregroundColor(theme.primary)
-                    }
-                }
 
-            // Quick suggestions header + chips
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Or pick a skill:")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(theme.textSecondary)
-
-                VStack(spacing: 8) {
-                    HStack(spacing: 8) {
-                        suggestionChip("Wrist shot")
-                        suggestionChip("Slap shot")
-                        suggestionChip("Snapshot")
-                    }
-                    HStack(spacing: 8) {
-                        suggestionChip("Skating")
-                        suggestionChip("Stickhandling")
-                        suggestionChip("Passing")
-                    }
-                    HStack(spacing: 8) {
-                        suggestionChip("Backhand")
-                        suggestionChip("Deking")
-                        suggestionChip("Defense")
-                    }
-                    HStack(spacing: 8) {
-                        suggestionChip("Goalie")
-                        suggestionChip("One-timer")
-                        suggestionChip("Faceoffs")
-                    }
+            Text("e.g. \"Is my release quick enough?\" or \"How's my edge work?\"")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(theme.textSecondary.opacity(0.7))
+                .padding(.horizontal, 4)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isTextFieldFocused = false
                 }
+                .fontWeight(.semibold)
+                .foregroundColor(theme.primary)
             }
         }
-    }
-
-    private func suggestionChip(_ text: String) -> some View {
-        Button(action: {
-            userRequest = text
-            HapticManager.shared.playImpact(style: .light)
-        }) {
-            Text(text)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(userRequest == text ? theme.background : theme.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(userRequest == text ? theme.primary : theme.surface)
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(userRequest == text ? theme.primary : theme.textSecondary.opacity(0.3), lineWidth: 1)
-                )
-        }
-        .buttonStyle(PlainButtonStyle())
     }
 
 
@@ -238,6 +461,17 @@ struct SkillCheckVideoCaptureView: View {
     }
 
     // MARK: - Bottom Button
+    /// Button is enabled when: video selected AND (skill chip selected OR custom text entered)
+    private var canAnalyze: Bool {
+        guard videoURL != nil else { return false }
+
+        if showCustomField {
+            return !customRequest.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } else {
+            return selectedSkill != nil
+        }
+    }
+
     private var bottomButton: some View {
         AppButton(
             title: "Analyze My Skill",
@@ -252,7 +486,7 @@ struct SkillCheckVideoCaptureView: View {
             style: .primary,
             size: .large,
             icon: "sparkles",
-            isDisabled: videoURL == nil
+            isDisabled: !canAnalyze
         )
         .padding(.horizontal, theme.spacing.lg)
         .padding(.bottom, theme.spacing.lg)

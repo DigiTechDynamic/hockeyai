@@ -11,6 +11,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var permissionGranted = false
     @Published var showingPlayerRater = false
     @Published var playerRating: PlayerRating? = nil
+    @Published var playerProfile: PlayerProfile? = nil
 
     // MARK: - Completion Handlers
     var onComplete: (() -> Void)?
@@ -75,5 +76,19 @@ class OnboardingViewModel: ObservableObject {
         // Call the stored navigation completion
         navigationCompletion?(.proceed)
         navigationCompletion = nil
+    }
+
+    // MARK: - Profile Management
+    func saveProfileToDefaults() {
+        guard let profile = playerProfile else { return }
+
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(profile)
+            UserDefaults.standard.set(data, forKey: "playerProfile")
+            print("[Onboarding] ✅ Profile saved to UserDefaults")
+        } catch {
+            print("[Onboarding] ❌ Failed to save profile: \(error)")
+        }
     }
 }

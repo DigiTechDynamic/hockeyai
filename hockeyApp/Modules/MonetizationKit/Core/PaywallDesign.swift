@@ -42,12 +42,12 @@ struct LoadedProducts {
 
     func priceFor(productId: String) -> String {
         switch productId {
-        case MonetizationConfig.monthlySubscriptionID:
-            return monthlyPrice
-        case MonetizationConfig.yearlySubscriptionID:
-            return yearlyPrice
-        case "weekly":
+        case MonetizationConfig.ProductIDs.weekly, "weekly":
             return weeklyPrice
+        case MonetizationConfig.ProductIDs.yearly, "yearly":
+            return yearlyPrice
+        case "monthly":
+            return monthlyPrice
         case "three_month":
             return threeMonthPrice
         case "six_month":
@@ -61,12 +61,12 @@ struct LoadedProducts {
 
     func packageFor(productId: String) -> Package? {
         switch productId {
-        case MonetizationConfig.monthlySubscriptionID:
-            return monthly
-        case MonetizationConfig.yearlySubscriptionID:
-            return yearly
-        case "weekly":
+        case MonetizationConfig.ProductIDs.weekly, "weekly":
             return weekly
+        case MonetizationConfig.ProductIDs.yearly, "yearly":
+            return yearly
+        case "monthly":
+            return monthly
         case "three_month":
             return threeMonth
         case "six_month":

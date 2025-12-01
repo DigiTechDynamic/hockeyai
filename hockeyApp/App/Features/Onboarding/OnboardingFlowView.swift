@@ -3,6 +3,9 @@ import SwiftUI
 // MARK: - Onboarding Steps
 enum OnboardingStep: Int, CaseIterable {
     case greenyWelcome = 0
+    case profileSetup
+    case bodySetup
+    case gameSetup
     case styCheckIntro
     case appRating
     case notificationAsk
@@ -26,6 +29,9 @@ struct OnboardingFlowView: View {
         let vm = OnboardingViewModel()
         let pages: [AnyOnboardingPage] = [
             AnyOnboardingPage(GreenyWelcomePage(viewModel: vm)),
+            AnyOnboardingPage(ProfileSetupPage(viewModel: vm)),
+            AnyOnboardingPage(BodySetupPage(viewModel: vm)),
+            AnyOnboardingPage(GameSetupPage(viewModel: vm)),
             AnyOnboardingPage(STYCheckIntroPage(viewModel: vm)),
             AnyOnboardingPage(AppRatingPage(viewModel: vm)),
             AnyOnboardingPage(NotificationAskPage(viewModel: vm))
@@ -102,6 +108,12 @@ struct OnboardingFlowView: View {
         switch step {
         case .greenyWelcome:
             GreenyWelcomeScreen(viewModel: viewModel, coordinator: coordinator)
+        case .profileSetup:
+            ProfileSetupScreen(viewModel: viewModel, coordinator: coordinator)
+        case .bodySetup:
+            BodySetupScreen(viewModel: viewModel, coordinator: coordinator)
+        case .gameSetup:
+            GameSetupScreen(viewModel: viewModel, coordinator: coordinator)
         case .styCheckIntro:
             STYCheckIntroScreen(viewModel: viewModel, coordinator: coordinator)
         case .appRating:

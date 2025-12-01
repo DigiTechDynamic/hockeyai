@@ -40,8 +40,8 @@ struct MonetizationGateViewModifier: ViewModifier {
 
     private func checkAccessAndShow() {
         AnalyticsManager.shared.track(
-            eventName: MonetizationConfig.aiAnalysisGatedEvent,
-            properties: ["source": source]
+            eventName: "feature_gated",
+            properties: ["source": source, "feature": featureIdentifier]
         )
 
         if monetization.checkAccess(featureIdentifier: featureIdentifier, consumeAccess: consumeAccess) {

@@ -178,6 +178,16 @@ class PlayerRaterViewModel: ObservableObject {
         }
     }
 
+    /// Reset state to start a new STY check (used from results screen)
+    func startNewCheck() {
+        currentStep = .photoUpload
+        uploadedImage = nil
+        rating = nil
+        error = nil
+        analysisProgress = 0.0
+        isAnalyzing = false
+    }
+
     // MARK: - Premium Actions
 
     /// Trigger paywall to unlock Beauty Check

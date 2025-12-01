@@ -25,7 +25,7 @@ private struct HockeyUltraWeeklyPaywallContent: View {
 
     // ONLY weekly option - no trials, no other plans
     private let weeklyPrice = "$4.99"
-    private let weeklyProductID = MonetizationConfig.ProductIDs.weeklyStandard
+    private let weeklyProductID = MonetizationConfig.ProductIDs.weekly
 
     // Safe area helpers
     private var safeTop: CGFloat { safeInsets.top }

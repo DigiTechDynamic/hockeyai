@@ -12,6 +12,7 @@ struct PlayerProfile: Codable {
     var playStyle: PlayStyle?
     var customPlayStyle: String?
     var jerseyNumber: String? // Player's jersey number
+    var skillLevel: SkillLevel? // Player's skill level
     
     // Computed properties for display
     var heightInFeetAndInches: String {
@@ -106,6 +107,35 @@ enum Handedness: String, CaseIterable, Codable {
         switch self {
         case .left: return "arrow.left.circle.fill"
         case .right: return "arrow.right.circle.fill"
+        }
+    }
+}
+
+enum SkillLevel: String, CaseIterable, Codable {
+    case beginner = "Beginner"
+    case intermediate = "Intermediate"
+    case competitive = "Competitive"
+    case elite = "Elite"
+
+    var description: String {
+        switch self {
+        case .beginner:
+            return "New to hockey or learning basics"
+        case .intermediate:
+            return "Solid fundamentals, still developing"
+        case .competitive:
+            return "Travel/rep team level player"
+        case .elite:
+            return "AAA, Junior, or Pro level"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .beginner: return "star"
+        case .intermediate: return "star.leadinghalf.filled"
+        case .competitive: return "star.fill"
+        case .elite: return "crown.fill"
         }
     }
 }

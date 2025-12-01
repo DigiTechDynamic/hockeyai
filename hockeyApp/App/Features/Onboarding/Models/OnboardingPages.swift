@@ -11,7 +11,73 @@ struct GreenyWelcomePage: OnboardingPageProtocol {
     }
 
     func onNavigateForward(completion: @escaping (NavigationResult) -> Void) {
-        // Just proceed to next page (STY Check Intro)
+        // Just proceed to next page (Profile Setup)
+        completion(.proceed)
+    }
+}
+
+// MARK: - Profile Setup Page (Name, Age, Phone)
+struct ProfileSetupPage: OnboardingPageProtocol {
+    let viewModel: OnboardingViewModel
+
+    var pageID: String { "profile_setup" }
+
+    var navigationRules: NavigationRules {
+        NavigationRules(
+            allowsSwipeBack: true,
+            allowsSwipeForward: false,
+            showsBackButton: true,
+            showsSkipButton: false,
+            showsProgressBar: true,
+            transitionDuration: 0.3
+        )
+    }
+
+    func onNavigateForward(completion: @escaping (NavigationResult) -> Void) {
+        completion(.proceed)
+    }
+}
+
+// MARK: - Body Setup Page (Height, Weight, Gender)
+struct BodySetupPage: OnboardingPageProtocol {
+    let viewModel: OnboardingViewModel
+
+    var pageID: String { "body_setup" }
+
+    var navigationRules: NavigationRules {
+        NavigationRules(
+            allowsSwipeBack: true,
+            allowsSwipeForward: false,
+            showsBackButton: true,
+            showsSkipButton: false,
+            showsProgressBar: true,
+            transitionDuration: 0.3
+        )
+    }
+
+    func onNavigateForward(completion: @escaping (NavigationResult) -> Void) {
+        completion(.proceed)
+    }
+}
+
+// MARK: - Game Setup Page (Position, Skill Level, Handedness)
+struct GameSetupPage: OnboardingPageProtocol {
+    let viewModel: OnboardingViewModel
+
+    var pageID: String { "game_setup" }
+
+    var navigationRules: NavigationRules {
+        NavigationRules(
+            allowsSwipeBack: true,
+            allowsSwipeForward: false,
+            showsBackButton: true,
+            showsSkipButton: false,
+            showsProgressBar: true,
+            transitionDuration: 0.3
+        )
+    }
+
+    func onNavigateForward(completion: @escaping (NavigationResult) -> Void) {
         completion(.proceed)
     }
 }

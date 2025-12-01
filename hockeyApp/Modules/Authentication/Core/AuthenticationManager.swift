@@ -250,13 +250,8 @@ extension AuthenticationManager: AuthenticationProtocol {
         print("[Auth] ✅ RevenueCat logged out")
         #endif
 
-        // 9. Clear paywall assignments and monetization state
-        print("[Auth] 🎯 Clearing paywall assignments...")
-        PaywallRegistry.clearAssignments()
-
-        // Reset Firebase Remote Config assignment for fresh A/B test
-        print("[Auth] 🧪 Resetting A/B test assignment...")
-        FirebaseRemoteConfigManager.shared.resetAssignment()
+        // 9. Clear monetization state
+        print("[Auth] 🎯 Clearing monetization state...")
 
         await MainActor.run {
             MonetizationManager.shared.isPremium = false

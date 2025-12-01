@@ -88,30 +88,62 @@ struct RatingResultsView: View {
                             .padding(.top, 8)
                         }
 
-                        // Continue/Skip button (secondary action - visible but de-emphasized)
-                        Button(action: {
-                            // Track completion (only for Home STY Check, onboarding completion tracked in AppRatingScreen)
-                            if viewModel.context != .onboarding {
-                                // Home STY funnel - mark as completed without premium
-                                if let rating = viewModel.rating {
-                                    STYCheckAnalytics.trackCompletedWithoutPremium(
-                                        score: rating.overallScore,
-                                        tier: rating.archetype
-                                    )
+                        // Action Buttons
+                        VStack(spacing: 12) {
+                            // Onboarding: Single continue button
+                            // Regular: New STY Check + Done buttons (matches SavedSTYCheckResultsView)
+                            if viewModel.context == .onboarding {
+                                Button(action: {
+                                    viewModel.complete()
+                                }) {
+                                    Text("Continue")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(theme.background)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 52)
+                                        .background(theme.primary)
+                                        .cornerRadius(14)
+                                }
+                            } else {
+                                // New Check button (primary)
+                                Button(action: {
+                                    viewModel.startNewCheck()
+                                }) {
+                                    HStack {
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 16, weight: .bold))
+                                        Text("New STY Check")
+                                            .font(.system(size: 16, weight: .bold))
+                                    }
+                                    .foregroundColor(theme.background)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
+                                    .background(theme.primary)
+                                    .cornerRadius(14)
+                                }
+
+                                // Done button (secondary)
+                                Button(action: {
+                                    // Track completion
+                                    if let rating = viewModel.rating {
+                                        STYCheckAnalytics.trackCompletedWithoutPremium(
+                                            score: rating.overallScore,
+                                            tier: rating.archetype
+                                        )
+                                    }
+                                    viewModel.complete()
+                                }) {
+                                    Text("Done")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(theme.text)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 52)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(theme.textSecondary.opacity(0.3), lineWidth: 1.5)
+                                        )
                                 }
                             }
-
-                            viewModel.complete()
-                        }) {
-                            Text(viewModel.context == .onboarding ? "Continue" : "Skip for now")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(theme.text)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(theme.textSecondary.opacity(0.3), lineWidth: 1.5)
-                                )
                         }
                         .padding(.top, theme.spacing.md)
                     }

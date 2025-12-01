@@ -676,8 +676,7 @@ class HockeyCardInfoViewModel: ObservableObject {
             jerseyNumber: jerseyNumber,
             position: position ?? .center,
             playerPhoto: playerPhotos.first ?? UIImage(),  // Primary photo for backwards compatibility
-            playerPhotos: playerPhotos,  // All photos for AI reference
-            photoUploadType: nil  // This view doesn't use photo type selection
+            playerPhotos: playerPhotos  // All photos for AI reference
         )
     }
 

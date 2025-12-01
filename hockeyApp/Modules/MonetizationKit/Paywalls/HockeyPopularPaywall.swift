@@ -31,12 +31,12 @@ private struct HockeyPopularPaywallContent: View {
     // SIMPLIFIED: No trial toggle - Weekly has no trial, Yearly has 3-day trial (always)
     // 3-DAY TRIAL on yearly (face rater psychology - users decide within 24-48 hours)
     private let pricingData: [(plan: PricingPlan, price: String, period: String, productID: String, trialDays: Int?, badge: String?)] = [
-        (.weekly, "$4.99", "week", MonetizationConfig.ProductIDs.weeklyStandard, nil, nil),
-        (.annual, "$49.99", "year", MonetizationConfig.ProductIDs.yearlyStandardTrial, 3, "BEST VALUE")
+        (.weekly, "$4.99", "week", MonetizationConfig.ProductIDs.weekly, nil, nil),
+        (.annual, "$49.99", "year", MonetizationConfig.ProductIDs.yearly, 3, "BEST VALUE")
     ]
 
     private var selectedProductID: String {
-        pricingData.first(where: { $0.plan == selectedPlan })?.productID ?? MonetizationConfig.ProductIDs.yearlyStandardTrial
+        pricingData.first(where: { $0.plan == selectedPlan })?.productID ?? MonetizationConfig.ProductIDs.yearly
     }
 
     private var selectedPrice: String {
@@ -364,8 +364,8 @@ private struct HockeyPopularPaywallContent: View {
                                 .foregroundColor(.white.opacity(0.85))
                         } else {
                             Text("Just \(price) per \(period)")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.85))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.85))
                         }
                     }
                     .frame(minHeight: 36, alignment: .leading)

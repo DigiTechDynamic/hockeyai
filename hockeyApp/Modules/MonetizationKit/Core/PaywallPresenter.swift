@@ -16,7 +16,6 @@ struct PaywallPresenter: View {
     )
     @State private var isLoading = true
     @State private var purchaseInProgress = false
-    @State private var showFreeTrial = false // Toggle state for trial
 
     var body: some View {
         ZStack {
@@ -32,7 +31,6 @@ struct PaywallPresenter: View {
             } else {
                 // Get the appropriate design from registry
                 let design = PaywallRegistry.getDesign(for: source)
-                let _ = print("[PaywallPresenter] 🎨 Showing design: \(design.id) for source: \(source)")
 
                 design.build(
                     products: products,
@@ -40,8 +38,8 @@ struct PaywallPresenter: View {
                         purchase: handlePurchase,
                         restore: handleRestore,
                         dismiss: handleDismiss,
-                        toggleTrial: canShowTrialToggle(for: design.id) ? handleTrialToggle : nil,
-                        canShowTrialToggle: canShowTrialToggle(for: design.id),
+                        toggleTrial: nil,
+                        canShowTrialToggle: false,
                         trackEvent: trackEvent,
                         trackPurchaseStart: trackPurchaseStart,
                         trackPurchaseComplete: trackPurchaseComplete,
@@ -110,41 +108,21 @@ struct PaywallPresenter: View {
         isLoading = true
         await monetization.refreshOfferings(force: false)
 
-        // Get the paywall design and its configuration
-        let design = PaywallRegistry.getDesign(for: source)
-        let paywallConfig = MonetizationConfig.paywallConfigurations[design.id]
-
-        // Get product IDs based on paywall configuration and trial state
-        let productIDs = MonetizationConfig.getProductIDs(for: design.id, withTrial: showFreeTrial)
-
-        // Map packages based on the paywall's pricing tier
         let packages = monetization.availablePackages
 
-        // Initialize showFreeTrial based on paywall config
-        if let config = paywallConfig {
-            showFreeTrial = config.showFreeTrial
-        }
-
-        // Load products based on current trial toggle state
-        updateProductsForTrialState(packages: packages, productIDs: productIDs)
-
-        isLoading = false
-    }
-
-    private func updateProductsForTrialState(packages: [Package], productIDs: (weekly: String, monthly: String?, yearly: String)) {
+        // Load products - weekly and yearly only
         products = LoadedProducts(
-            monthly: productIDs.monthly != nil
-                ? (packages.first { $0.storeProduct.productIdentifier == productIDs.monthly }
-                    ?? packages.first { $0.identifier.contains("monthly") })
-                : nil,  // Don't load monthly if not configured
-            yearly: packages.first { $0.storeProduct.productIdentifier == productIDs.yearly }
+            monthly: nil,
+            yearly: packages.first { $0.storeProduct.productIdentifier == MonetizationConfig.ProductIDs.yearly }
                 ?? packages.first { $0.identifier.contains("annual") },
-            weekly: packages.first { $0.storeProduct.productIdentifier == productIDs.weekly }
+            weekly: packages.first { $0.storeProduct.productIdentifier == MonetizationConfig.ProductIDs.weekly }
                 ?? packages.first { $0.identifier.contains("weekly") },
             threeMonth: nil,
             sixMonth: nil,
             lifetime: nil
         )
+
+        isLoading = false
     }
 
     // MARK: - Action Handlers
@@ -202,34 +180,6 @@ struct PaywallPresenter: View {
         dismiss()
     }
 
-    // MARK: - Trial Toggle Helpers
-
-    private func canShowTrialToggle(for paywallID: String) -> Bool {
-        // Only show toggle for Standard and Premium tiers
-        guard let config = MonetizationConfig.paywallConfigurations[paywallID] else {
-            return false
-        }
-
-        // Budget tier doesn't have trial options
-        // Also check if this specific paywall should show trials
-        return config.pricingTier != .budget && config.showFreeTrial
-    }
-
-    private func handleTrialToggle(_ enabled: Bool) {
-        showFreeTrial = enabled
-
-        // Get updated product IDs based on new trial state
-        let design = PaywallRegistry.getDesign(for: source)
-        let productIDs = MonetizationConfig.getProductIDs(for: design.id, withTrial: showFreeTrial)
-
-        // Update products with new IDs
-        let packages = monetization.availablePackages
-        updateProductsForTrialState(packages: packages, productIDs: productIDs)
-
-        // Track the toggle event
-        trackEvent("trial_toggle", ["enabled": enabled, "paywall_id": design.id])
-    }
-
     // MARK: - Analytics
 
     private func trackEvent(_ name: String, _ properties: [String: Any]) {
@@ -274,9 +224,6 @@ struct PaywallPresenter: View {
         ]
 
         trackEvent("purchase_completed", purchaseProperties)
-
-        // Note: trial_started event is automatically tracked by RevenueCat webhook as "rc_trial_started_event"
-        // We don't duplicate it here to avoid double-counting in Mixpanel
     }
 
     // Helper to find package by product ID from loaded products

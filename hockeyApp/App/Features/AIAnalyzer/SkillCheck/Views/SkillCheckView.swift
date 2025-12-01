@@ -95,6 +95,11 @@ struct SkillCheckView: View {
                         } else if let result = viewModel.analysisResult {
                             SkillCheckResultsView(
                                 analysisResult: result,
+                                onNewCheck: {
+                                    // User wants to do a new check
+                                    viewModel.reset()
+                                    flowState.restart()
+                                },
                                 onExit: {
                                     onAnalysisComplete?(result)
                                     viewModel.cleanup()

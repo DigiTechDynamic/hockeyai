@@ -7,6 +7,7 @@ import AVFoundation
 struct SkillCheckResultsView: View {
     @Environment(\.theme) var theme
     let analysisResult: SkillAnalysisResult?
+    let onNewCheck: () -> Void
     let onExit: () -> Void
 
     @State private var showContent = false
@@ -48,17 +49,35 @@ struct SkillCheckResultsView: View {
                         )
                         .padding(.top, 8)
 
-                        // Done button
-                        Button(action: onExit) {
-                            Text("Done")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(theme.text)
+                        // Action Buttons (matches SavedSkillCheckResultsView)
+                        VStack(spacing: 12) {
+                            // New Check button (primary)
+                            Button(action: onNewCheck) {
+                                HStack {
+                                    Image(systemName: "video.fill")
+                                        .font(.system(size: 16, weight: .bold))
+                                    Text("New Skill Check")
+                                        .font(.system(size: 16, weight: .bold))
+                                }
+                                .foregroundColor(theme.background)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(theme.textSecondary.opacity(0.3), lineWidth: 1.5)
-                                )
+                                .background(theme.primary)
+                                .cornerRadius(14)
+                            }
+
+                            // Done button (secondary)
+                            Button(action: onExit) {
+                                Text("Done")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(theme.text)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(theme.textSecondary.opacity(0.3), lineWidth: 1.5)
+                                    )
+                            }
                         }
                         .padding(.top, theme.spacing.md)
                     }
@@ -498,75 +517,102 @@ private struct PremiumEliteBreakdownCard: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             } else {
-                // Locked content preview
-                ZStack {
-                    // Blurred background with hints
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("✓ Great weight transfer from back to...")
-                            .blur(radius: 6)
-                        Text("✓ Smooth stick flex on the release...")
-                            .blur(radius: 6)
-                        Text("△ Keep elbow higher during...")
-                            .blur(radius: 6)
-                        Text("△ Bend knees more for better...")
-                            .blur(radius: 6)
-                        Text("◆ Wall shots - 50 reps daily...")
-                            .blur(radius: 6)
-                        Text("◆ One-knee wrist shots to isolate...")
-                            .blur(radius: 6)
+                // Locked state - Large premium upsell section (matches SavedSkillCheckResultsView)
+                VStack(spacing: 24) {
+                    // Blurred preview sections to show what they're missing
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Section 1: What You Did Well (blurred)
+                        lockedSection(
+                            icon: "checkmark.circle.fill",
+                            title: "WHAT YOU DID WELL",
+                            color: .green,
+                            previewLines: [
+                                "Great weight transfer from back to front foot",
+                                "Smooth stick flex on the release point",
+                                "Good follow-through toward target"
+                            ]
+                        )
+
+                        Divider().background(Color.white.opacity(0.1))
+
+                        // Section 2: What To Work On (blurred)
+                        lockedSection(
+                            icon: "exclamationmark.triangle.fill",
+                            title: "WHAT TO WORK ON",
+                            color: .orange,
+                            previewLines: [
+                                "Keep elbow higher during wind-up",
+                                "Bend knees more for better power",
+                                "Rotate hips earlier in the motion"
+                            ]
+                        )
+
+                        Divider().background(Color.white.opacity(0.1))
+
+                        // Section 3: Drills (blurred)
+                        lockedSection(
+                            icon: "figure.strengthtraining.traditional",
+                            title: "DRILLS TO PRACTICE",
+                            color: theme.primary,
+                            previewLines: [
+                                "Wall shots - 50 reps daily focusing on release",
+                                "One-knee wrist shots to isolate upper body",
+                                "Stick flex drills against boards"
+                            ]
+                        )
                     }
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 150)
                     .padding(20)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.black.opacity(0.4))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .strokeBorder(theme.primary.opacity(0.3), lineWidth: 1.5)
-                            )
+                            .fill(Color.black.opacity(0.3))
                     )
+                    .overlay(
+                        // Lock overlay
+                        ZStack {
+                            Color.black.opacity(0.4)
 
-                    // Lock overlay
-                    VStack(spacing: 16) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 36))
-                            .foregroundColor(theme.primary)
+                            VStack(spacing: 16) {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(theme.primary)
 
-                        VStack(spacing: 12) {
-                            featureRow(icon: "checkmark.circle.fill", text: "Technique analysis")
-                            featureRow(icon: "checkmark.circle.fill", text: "What to improve")
-                            featureRow(icon: "checkmark.circle.fill", text: "Drills to practice")
+                                Text("Premium Analysis Locked")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+
+                                Text("Unlock to see your personalized feedback")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
                         }
-                    }
-                }
-                .padding(.horizontal, 20)
-
-                // Unlock button
-                Button(action: onUnlock) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "lock.open.fill")
-                            .font(.system(size: 16, weight: .semibold))
-
-                        Text("Unlock Full Breakdown")
-                            .font(.system(size: 17, weight: .bold))
-                    }
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(
-                        LinearGradient(
-                            colors: [theme.primary, theme.primary.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                        .cornerRadius(14)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                     )
+                    .padding(.horizontal, 20)
+
+                    // Feature list
+                    VStack(spacing: 14) {
+                        featureRowLarge(icon: "checkmark.circle.fill", text: "Detailed technique analysis")
+                        featureRowLarge(icon: "checkmark.circle.fill", text: "Personalized improvement tips")
+                        featureRowLarge(icon: "checkmark.circle.fill", text: "Custom practice drills")
+                        featureRowLarge(icon: "checkmark.circle.fill", text: "Track progress over time")
+                    }
+                    .padding(.horizontal, 20)
+
+                    // Unlock button
+                    Button(action: onUnlock) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "lock.open.fill")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("Unlock Full Breakdown")
+                                .font(.system(size: 18, weight: .bold))
+                        }
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(theme.primary.cornerRadius(16))
+                    }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
                 .padding(.bottom, 20)
             }
         }
@@ -610,6 +656,47 @@ private struct PremiumEliteBreakdownCard: View {
             Text(text)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.white)
+        }
+    }
+
+    private func featureRowLarge(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(theme.primary)
+            Text(text)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.white)
+            Spacer()
+        }
+    }
+
+    private func lockedSection(icon: String, title: String, color: Color, previewLines: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(color)
+                Text(title)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundColor(color)
+                    .tracking(1.2)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(previewLines, id: \.self) { line in
+                    HStack(alignment: .top, spacing: 8) {
+                        Circle()
+                            .fill(color.opacity(0.5))
+                            .frame(width: 5, height: 5)
+                            .padding(.top, 6)
+                        Text(line)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.6))
+                            .blur(radius: 4)
+                    }
+                }
+            }
         }
     }
 
@@ -788,6 +875,7 @@ private struct SkillCheckCommentCard: View {
                 selectedShotType: ""
             )
         ),
+        onNewCheck: {},
         onExit: {}
     )
     .preferredColorScheme(.dark)
