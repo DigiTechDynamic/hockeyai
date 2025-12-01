@@ -374,7 +374,7 @@ class JerseySelectionViewModel: ObservableObject {
 }
 
 // MARK: - Jersey Option Enum
-enum JerseyOption {
+enum JerseyOption: String, Codable {
     case usePhoto
     case nhl
     case sty
@@ -398,7 +398,7 @@ struct PlayerCardInfo {
 }
 
 // MARK: - Photo Upload Type
-enum PhotoUploadType: String, CaseIterable {
+enum PhotoUploadType: String, CaseIterable, Codable {
     case actionShot = "Action Shot"
     case headshot = "Headshot"
     case fullBody = "Full Body"

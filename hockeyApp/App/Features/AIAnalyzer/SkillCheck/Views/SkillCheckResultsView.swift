@@ -14,6 +14,7 @@ struct SkillCheckResultsView: View {
     @State private var scoreTimer: Timer?
     @State private var showPaywall = false
     @State private var isPremiumUnlocked = false
+    @State private var hasSavedResult = false
 
     var body: some View {
         ZStack {
@@ -81,6 +82,12 @@ struct SkillCheckResultsView: View {
                     tier: tier,
                     category: result.category
                 )
+
+                // Save result to history (only once per view)
+                if !hasSavedResult {
+                    hasSavedResult = true
+                    saveResultToHistory(result)
+                }
             }
 
             checkPremiumStatus()
@@ -192,6 +199,37 @@ struct SkillCheckResultsView: View {
         case 60..<70: return "DECENT"
         case 50..<60: return "AVERAGE"
         default: return "DEVELOPING"
+        }
+    }
+
+    /// Save result to persistent history
+    private func saveResultToHistory(_ result: SkillAnalysisResult) {
+        // Generate thumbnail from video if available
+        var thumbnail: UIImage? = nil
+        if let videoURL = result.videoURL {
+            thumbnail = generateThumbnail(from: videoURL)
+        }
+
+        // Save to store
+        AnalysisResultsStore.shared.saveSkillCheckResult(
+            result,
+            videoURL: result.videoURL,
+            thumbnail: thumbnail
+        )
+    }
+
+    /// Generate thumbnail from video URL
+    private func generateThumbnail(from url: URL) -> UIImage? {
+        let asset = AVAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+
+        do {
+            let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+            return UIImage(cgImage: cgImage)
+        } catch {
+            print("⚠️ [SkillCheckResultsView] Failed to generate thumbnail: \(error)")
+            return nil
         }
     }
 }

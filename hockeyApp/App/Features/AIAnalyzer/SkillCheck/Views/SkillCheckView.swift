@@ -18,14 +18,53 @@ struct SkillCheckView: View {
     @State private var gateTriggerId = UUID().uuidString
     @State private var pendingMonetizedAction: (() -> Void)?
 
+    // Saved results state
+    @State private var showingSavedResults = false
+    @State private var savedResult: StoredSkillCheckResult?
+
     init(onAnalysisComplete: ((SkillAnalysisResult) -> Void)? = nil) {
         self.onAnalysisComplete = onAnalysisComplete
     }
 
+    /// Check if user has a recent saved result to show
+    private var hasSavedResult: Bool {
+        AnalysisResultsStore.shared.latestSkillResult != nil
+    }
+
     var body: some View {
+        Group {
+            if showingSavedResults, let saved = savedResult {
+                // Show saved results view
+                SavedSkillCheckResultsView(
+                    result: saved,
+                    onNewCheck: {
+                        // User wants to do a new check
+                        showingSavedResults = false
+                        savedResult = nil
+                    },
+                    onExit: {
+                        dismiss()
+                    }
+                )
+            } else {
+                // Normal flow
+                normalFlowView
+            }
+        }
+        .onAppear {
+            // Check for saved results when view appears
+            if let latestResult = AnalysisResultsStore.shared.latestSkillResult {
+                savedResult = latestResult
+                showingSavedResults = true
+            }
+        }
+    }
+
+    // MARK: - Normal Flow View
+    private var normalFlowView: some View {
         let flow = SkillCheckFlowDefinition()
 
-        AIFlowContainer(flow: flow) { flowState in
+        return AIFlowContainer(flow: flow) { flowState in
             ZStack {
                 if let stage = flowState.currentStage {
                     switch stage.id {

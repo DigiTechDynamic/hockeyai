@@ -117,6 +117,7 @@ final class AppSecrets {
             "OpenAIAPIKey",
             "GeminiAPIKey",
             "GEMINI_API_KEY",
+            "GeminiAPIKey2",
             "FalAPIKey",
             "MixpanelTokenDev",
             "MixpanelTokenProd",
@@ -151,10 +152,23 @@ final class AppSecrets {
         loadSecureKey("OpenAIAPIKey")
     }
     
-    /// Gemini API Key
+    /// Gemini API Key (Primary)
     var geminiAPIKey: String? {
         // Try multiple key names for flexibility
         loadSecureKey("GeminiAPIKey") ?? loadSecureKey("GEMINI_API_KEY")
+    }
+
+    /// Gemini API Key 2 (Secondary - for fallback when primary hits rate limit)
+    var geminiAPIKey2: String? {
+        loadSecureKey("GeminiAPIKey2")
+    }
+
+    /// All available Gemini API keys (for rotation/fallback)
+    var allGeminiAPIKeys: [String] {
+        var keys: [String] = []
+        if let key1 = geminiAPIKey { keys.append(key1) }
+        if let key2 = geminiAPIKey2 { keys.append(key2) }
+        return keys
     }
 
     /// fal.ai API Key
@@ -246,7 +260,9 @@ final class AppSecrets {
         
         print("\nAPI Keys:")
         print("- OpenAI: \(openAIAPIKey != nil ? "✅ (Secure)" : "❌")")
-        print("- Gemini: \(geminiAPIKey != nil ? "✅ (Secure)" : "❌")")
+        print("- Gemini Key 1: \(geminiAPIKey != nil ? "✅ (Secure)" : "❌")")
+        print("- Gemini Key 2: \(geminiAPIKey2 != nil ? "✅ (Secure)" : "❌")")
+        print("- Gemini Keys Total: \(allGeminiAPIKeys.count)")
         print("- Mixpanel: \(mixpanelToken != nil ? "✅ (Secure)" : "❌")")
         print("- RevenueCat: \(revenueCatAPIKey != nil ? "✅ (Secure)" : "❌")")
         print("- Branch: \(branchKey != nil ? "✅ (Secure)" : "❌")")
@@ -282,6 +298,7 @@ extension AppSecrets {
             "OpenAIAPIKey",
             "GeminiAPIKey",
             "GEMINI_API_KEY",
+            "GeminiAPIKey2",
             "FalAPIKey",
             "MixpanelTokenDev",
             "MixpanelTokenProd",

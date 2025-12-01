@@ -607,33 +607,58 @@ struct AIFlowContainer<Content: View>: View {
             VStack(spacing: 0) {
                 // Header with dynamic content (only show if stage wants it)
                 if let stage = flowState.currentStage, stage.showsHeader {
-                    let trailing = ((stage as? ProcessingStage)?.showsCancelButton == true)
-                        ? AnyView(
-                            Button(action: { showCancelConfirm = true }) {
-                                Text("Cancel")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .shadow(color: Color.white.opacity(0.85), radius: 1.5)
-                                    .shadow(color: Color.white.opacity(0.35), radius: 3.5)
-                                    .shadow(color: theme.destructive.opacity(0.35), radius: 6)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 5)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(theme.destructive)
-                                    )
-                                    .fixedSize()
-                            }
-                          )
-                        : nil
+                    let isProcessingWithCancel = (stage as? ProcessingStage)?.showsCancelButton == true
+                    let showBackButton = stage.canGoBack && flowState.currentStageIndex() > 0
+
+                    // Determine trailing button:
+                    // 1. Processing stage with cancel button -> show Cancel button
+                    // 2. Mid-flow with back button showing -> show X close button on right
+                    // 3. Otherwise -> no trailing button (X shows on left)
+                    let trailing: AnyView? = {
+                        if isProcessingWithCancel {
+                            return AnyView(
+                                Button(action: { showCancelConfirm = true }) {
+                                    Text("Cancel")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .shadow(color: Color.white.opacity(0.85), radius: 1.5)
+                                        .shadow(color: Color.white.opacity(0.35), radius: 3.5)
+                                        .shadow(color: theme.destructive.opacity(0.35), radius: 6)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 5)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(theme.destructive)
+                                        )
+                                        .fixedSize()
+                                }
+                            )
+                        } else if showBackButton {
+                            // Show close X on the right when back button is on the left
+                            return AnyView(
+                                Button(action: { dismiss() }) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(theme.surface)
+                                            .frame(width: 36, height: 36)
+
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(theme.textSecondary)
+                                    }
+                                }
+                            )
+                        }
+                        return nil
+                    }()
 
                     UnifiedAIHeader(
                         title: stage.title,
                         subtitle: stage.subtitle,
-                        showBackButton: stage.canGoBack && flowState.currentStageIndex() > 0,
+                        showBackButton: showBackButton,
                         onBack: { flowState.goBack() },
-                        // Hide the close (X) whenever a dedicated Cancel button is shown
-                        onClose: (trailing == nil) ? { dismiss() } : nil,
+                        // Show close (X) on left only when no back button and no trailing button
+                        onClose: (!showBackButton && trailing == nil) ? { dismiss() } : nil,
                         animationNamespace: animationNamespace,
                         trailingButton: trailing
                     )

@@ -17,6 +17,9 @@ struct StickAnalyzerView: View {
     @State private var pendingMonetizedAction: (() -> Void)?
     // Body scan state
     @State private var showBodyScan = false
+    // Resume state
+    @State private var showResumePrompt = false
+    @State private var savedStateToResume: StickAnalyzerSavedState? = nil
 
     let onAnalysisComplete: ((StickAnalysisResult) -> Void)?
 
@@ -140,15 +143,23 @@ struct StickAnalyzerView: View {
                 // Track funnel progress
                 if let stageId = newStage {
                     trackFunnelProgress(for: stageId)
+                    // Save state at key checkpoints (after each meaningful step)
+                    saveFlowStateIfNeeded(stageId: stageId, flowState: flowState)
                 }
             }
             .onAppear {
+                // Check for saved state to resume
+                checkForSavedState(flowState: flowState)
+
                 // Track funnel start
                 StickAnalyzerAnalytics.trackStarted(source: "equipment_tab")
                 // Track initial stage (onChange doesn't fire for the first value)
                 if let stageId = flowState.currentStage?.id {
                     trackFunnelProgress(for: stageId)
                 }
+            }
+            .sheet(isPresented: $showResumePrompt) {
+                resumePromptSheet(flowState: flowState)
             }
         }
         .overlay(
@@ -487,6 +498,146 @@ extension StickAnalyzerView {
             recommendedFlex: result.recommendations.idealFlex.min,
             hasBodyScan: hasBodyScan
         )
+
+        // Clear saved state on completion
+        FlowStateManager.shared.clear(.stickAnalyzer)
+    }
+
+    // MARK: - Flow State Persistence
+
+    /// Check for saved state and show resume prompt if found
+    private func checkForSavedState(flowState: AIFlowState) {
+        if let savedState = FlowStateManager.shared.load(StickAnalyzerSavedState.self) {
+            savedStateToResume = savedState
+            // Store flowState reference for resume
+            showResumePrompt = true
+            print("📂 [StickAnalyzerView] Found saved state at stage: \(savedState.currentStageId)")
+        }
+    }
+
+    /// Save flow state at key checkpoints
+    private func saveFlowStateIfNeeded(stageId: String, flowState: AIFlowState) {
+        // Save state after meaningful progress (not on processing/results)
+        let savableStages = ["player-profile", "body-scan", "shooting-priority", "primary-shot", "shooting-zone"]
+
+        guard savableStages.contains(stageId) else { return }
+
+        let state = StickAnalyzerSavedState.from(
+            currentStageId: stageId,
+            viewModel: viewModel,
+            flowState: flowState
+        )
+
+        FlowStateManager.shared.save(state)
+    }
+
+    /// Resume from saved state
+    private func resumeFromSavedState(_ savedState: StickAnalyzerSavedState, flowState: AIFlowState) {
+        print("▶️ [StickAnalyzerView] Resuming from stage: \(savedState.currentStageId)")
+
+        // Restore player profile
+        if let profile = savedState.playerProfile {
+            viewModel.setPlayerProfile(profile)
+            flowState.setData(profile, for: "player-profile")
+        }
+
+        // Restore body scan image
+        if let imagePath = savedState.bodyScanImagePath,
+           FlowStateManager.shared.mediaFileExists(at: imagePath) {
+            // Create a BodyScanResult from saved image path
+            let bodyScan = BodyScanResult(
+                scanDate: savedState.savedAt,
+                imagePath: imagePath
+            )
+            viewModel.setBodyScan(bodyScan)
+        }
+
+        // Restore questionnaire selections
+        if let priority = savedState.shootingPriority {
+            flowState.setData(priority, for: "shooting-priority")
+        }
+        if let shot = savedState.primaryShot {
+            flowState.setData(shot, for: "primary-shot")
+        }
+        if let zone = savedState.shootingZone {
+            flowState.setData(zone, for: "shooting-zone")
+        }
+
+        // Restore questionnaire if complete
+        if let questionnaire = savedState.questionnaire {
+            viewModel.setQuestionnaire(questionnaire)
+        }
+
+        // Navigate to the saved stage
+        if let targetStage = flowState.flow.stages.first(where: { $0.id == savedState.currentStageId }) {
+            flowState.currentStage = targetStage
+        }
+    }
+
+    /// Resume prompt sheet UI
+    @ViewBuilder
+    private func resumePromptSheet(flowState: AIFlowState) -> some View {
+        VStack(spacing: 24) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(theme.primary)
+
+                Text("Continue Where You Left Off?")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(theme.text)
+
+                if let savedState = savedStateToResume {
+                    let stageName = FlowStateManager.shared.getReadableStageInfo(for: .stickAnalyzer) ?? savedState.currentStageId
+                    let timeAgo = FlowStateManager.shared.formattedSaveTime(for: .stickAnalyzer) ?? "recently"
+
+                    Text("You were at \"\(stageName)\" (\(timeAgo))")
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.top, 32)
+
+            Spacer()
+
+            // Buttons
+            VStack(spacing: 12) {
+                Button(action: {
+                    showResumePrompt = false
+                    if let savedState = savedStateToResume {
+                        resumeFromSavedState(savedState, flowState: flowState)
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "play.fill")
+                        Text("Continue")
+                    }
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(theme.primary)
+                    .cornerRadius(theme.cornerRadius)
+                }
+
+                Button(action: {
+                    showResumePrompt = false
+                    FlowStateManager.shared.clear(.stickAnalyzer)
+                    savedStateToResume = nil
+                }) {
+                    Text("Start Fresh")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(theme.textSecondary)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+        }
+        .background(theme.background)
+        .presentationDetents([.height(320)])
+        .presentationDragIndicator(.visible)
     }
 }
 

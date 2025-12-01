@@ -260,4 +260,80 @@ struct FocusAreaMetric {
     }
 }
 
+// MARK: - AI Coach Saved State
+/// Persistable state for resuming the AI Coach flow
+struct AICoachSavedState: PersistableFlowState {
+    static let flowType: FlowType = .aiCoach
 
+    // Flow progress
+    let currentStageId: String
+    let savedAt: Date
+
+    // User data
+    let selectedShotType: ShotType?
+    let playerProfile: PlayerProfile?
+
+    // Video paths (relative to documents directory)
+    let frontNetVideoPath: String?
+    let sideAngleVideoPath: String?
+
+    /// Check if the state is still valid (media files exist)
+    func isValid() -> Bool {
+        // Check if video files still exist
+        if let frontPath = frontNetVideoPath {
+            if !FlowStateManager.shared.mediaFileExists(at: frontPath) {
+                return false
+            }
+        }
+        if let sidePath = sideAngleVideoPath {
+            if !FlowStateManager.shared.mediaFileExists(at: sidePath) {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// Create state from current flow state
+    @MainActor
+    static func from(
+        currentStageId: String,
+        flowState: AIFlowState
+    ) -> AICoachSavedState {
+        // Get selected shot type
+        let shotType = flowState.getData(for: "selected-shot-type") as? ShotType
+
+        // Get player profile
+        let playerProfile = flowState.getData(for: "player-profile") as? PlayerProfile
+
+        // Save videos if present
+        var frontVideoPath: String? = nil
+        var sideVideoPath: String? = nil
+
+        if let frontNetData = flowState.getData(for: "front-net-capture") as? MediaStageData,
+           let frontNetURL = frontNetData.videos.first {
+            frontVideoPath = FlowStateManager.shared.saveVideo(
+                from: frontNetURL,
+                identifier: "front_net",
+                flowType: .aiCoach
+            )
+        }
+
+        if let sideAngleData = flowState.getData(for: "side-angle-capture") as? MediaStageData,
+           let sideAngleURL = sideAngleData.videos.first {
+            sideVideoPath = FlowStateManager.shared.saveVideo(
+                from: sideAngleURL,
+                identifier: "side_angle",
+                flowType: .aiCoach
+            )
+        }
+
+        return AICoachSavedState(
+            currentStageId: currentStageId,
+            savedAt: Date(),
+            selectedShotType: shotType,
+            playerProfile: playerProfile,
+            frontNetVideoPath: frontVideoPath,
+            sideAngleVideoPath: sideVideoPath
+        )
+    }
+}

@@ -34,59 +34,8 @@ struct PremiumIntangiblesCard: View {
                     // Show full unlocked content
                     UnlockedIntangiblesView(data: data)
                 } else {
-                    // Show blurred preview
-                    VStack(spacing: theme.spacing.sm) {
-                        BlurredIntangiblesView(data: data)
-
-                        // Conversion strip (Social proof + Urgency) - CRITICAL FOR CONVERSION
-                        VStack(spacing: 6) {
-                            // Social proof with live indicator
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(Color.green)
-                                    .frame(width: 6, height: 6)
-
-                                Text("2,847 players unlocked today")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(theme.text)
-                            }
-
-                            // Urgency message
-                            Text("Limited time: Full beauty analysis available")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(theme.textSecondary)
-                        }
-                        .padding(.top, 4)
-
-                        // Reveal button (Looksmax-style aspirational CTA)
-                        Button(action: onUnlock) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 16, weight: .semibold))
-
-                                Text("Reveal My Beauty Check")
-                                    .font(.system(size: 17, weight: .bold))
-
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(
-                                LinearGradient(
-                                    colors: [
-                                        theme.primary,
-                                        theme.primary.opacity(0.85)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(14)
-                            .shadow(color: theme.primary.opacity(0.3), radius: 8, x: 0, y: 4)
-                        }
-                    }
+                    // Show large locked preview with upsell
+                    BlurredIntangiblesView(data: data, onUnlock: onUnlock)
                 }
             } else {
                 // No premium data available (non-person photo)
@@ -215,111 +164,176 @@ struct UnlockedIntangiblesView: View {
     }
 }
 
-// MARK: - Blurred Intangibles View (Looksmax/Umax-inspired locked preview)
+// MARK: - Blurred Intangibles View (Large locked preview with upsell)
 struct BlurredIntangiblesView: View {
     @Environment(\.theme) var theme
     let data: PremiumIntangibles
-
-    // Simulated live counter (in production, fetch from analytics)
-    @State private var playersRevealed = Int.random(in: 2400...2900)
+    let onUnlock: () -> Void
 
     var body: some View {
-        ZStack {
-            // Background content layer (shows actual data - will be heavily blurred)
-            VStack(alignment: .leading, spacing: theme.spacing.md) {
-                LockedMetricRow(
+        VStack(spacing: 24) {
+            // Blurred preview sections to show what they're missing
+            VStack(alignment: .leading, spacing: 20) {
+                // Section 1: Your Hidden Stats (blurred)
+                lockedSection(
+                    emoji: "📊",
+                    title: "YOUR HIDDEN STATS",
+                    color: theme.primary,
+                    previewLines: [
+                        ("💪", "Confidence", "\(data.confidenceScore)/100"),
+                        ("✨", "Hockey Flow", "\(data.flowScore)/100"),
+                        ("🥊", "Toughness", "\(data.toughnessScore)/100"),
+                        ("😤", "Intimidation", "\(data.intimidationScore)/100")
+                    ]
+                )
+
+                Divider().background(Color.white.opacity(0.1))
+
+                // Section 2: Locker Room Identity (blurred)
+                lockedSection2(
                     emoji: "🏒",
-                    label: "Nickname",
-                    value: "\"\(data.lockerRoomNickname)\""
+                    title: "LOCKER ROOM IDENTITY",
+                    color: .orange,
+                    previewItems: [
+                        ("Your Nickname", "\"\(data.lockerRoomNickname)\""),
+                        ("Why It Fits", data.nicknameExplanation)
+                    ]
                 )
 
-                LockedMetricRow(
+                Divider().background(Color.white.opacity(0.1))
+
+                // Section 3: Pro Comparison (blurred)
+                lockedSection2(
                     emoji: "⭐",
-                    label: "Pro Comp",
-                    value: data.proComparison
-                )
-
-                LockedMetricRow(
-                    emoji: "💪",
-                    label: "Confidence",
-                    value: "\(data.confidenceScore)/100"
-                )
-
-                LockedMetricRow(
-                    emoji: "✨",
-                    label: "Hockey Flow",
-                    value: "\(data.flowScore)/100"
-                )
-
-                LockedMetricRow(
-                    emoji: "🥊",
-                    label: "Toughness",
-                    value: "\(data.toughnessScore)/100"
-                )
-
-                LockedMetricRow(
-                    emoji: "😤",
-                    label: "Intimidation",
-                    value: "\(data.intimidationScore)/100"
+                    title: "YOUR PRO COMPARISON",
+                    color: .yellow,
+                    previewItems: [
+                        ("You Remind Us Of", data.proComparison),
+                        ("Because", data.proComparisonExplanation)
+                    ]
                 )
             }
-            .blur(radius: 10)  // Optimal blur - visible shapes but illegible text
-            .opacity(0.6)      // Higher opacity to show more content hints
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.black.opacity(0.3))
+            )
+            .overlay(
+                // Lock overlay
+                ZStack {
+                    Color.black.opacity(0.4)
 
-            // Progressive gradient overlay (Looksmax pattern)
-            VStack(spacing: 0) {
-                Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(theme.primary)
 
-                // Progressive gradient fade (balanced - show blur at top, solid at bottom)
-                LinearGradient(
-                    colors: [
-                        Color.clear,
-                        Color.black.opacity(0.3),
-                        Color.black.opacity(0.7),
-                        Color.black.opacity(0.9)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 140)
+                        Text("Premium Insights Locked")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
 
-                // Lock message over gradient
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 32, weight: .semibold))
-                        .foregroundColor(theme.primary)
-
-                    Text("6 Hidden Strengths")
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundColor(theme.text)
-
-                    Text("Elite-level insights locked")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(theme.textSecondary.opacity(0.8))
+                        Text("Unlock to reveal your full beauty check")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
                 }
-                .padding(.bottom, theme.spacing.lg)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            )
+
+            // Feature list
+            VStack(spacing: 14) {
+                featureRowLarge(icon: "checkmark.circle.fill", text: "6 hidden strength scores")
+                featureRowLarge(icon: "checkmark.circle.fill", text: "Your locker room nickname")
+                featureRowLarge(icon: "checkmark.circle.fill", text: "NHL pro player comparison")
+                featureRowLarge(icon: "checkmark.circle.fill", text: "Detailed explanations for each")
+            }
+
+            // Unlock button
+            Button(action: onUnlock) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .bold))
+                    Text("Reveal My Beauty Check")
+                        .font(.system(size: 18, weight: .bold))
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .bold))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 60)
+                .background(theme.primary.cornerRadius(16))
             }
         }
-        .frame(height: 260)  // Slightly taller for better gradient
-        .padding(theme.spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    theme.primary.opacity(0.3),
-                                    theme.primary.opacity(0.05)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                )
-        )
+    }
+
+    private func featureRowLarge(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(theme.primary)
+            Text(text)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.white)
+            Spacer()
+        }
+    }
+
+    private func lockedSection(emoji: String, title: String, color: Color, previewLines: [(String, String, String)]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(emoji)
+                    .font(.system(size: 16))
+                Text(title)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundColor(color)
+                    .tracking(1.2)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(previewLines, id: \.1) { item in
+                    HStack(spacing: 10) {
+                        Text(item.0)
+                            .font(.system(size: 14))
+                        Text(item.1)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.6))
+                        Spacer()
+                        Text(item.2)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(theme.primary.opacity(0.6))
+                    }
+                    .blur(radius: 4)
+                }
+            }
+        }
+    }
+
+    private func lockedSection2(emoji: String, title: String, color: Color, previewItems: [(String, String)]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(emoji)
+                    .font(.system(size: 16))
+                Text(title)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundColor(color)
+                    .tracking(1.2)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(previewItems, id: \.0) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.0)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.5))
+                        Text(item.1)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(2)
+                    }
+                    .blur(radius: 4)
+                }
+            }
+        }
     }
 }
 

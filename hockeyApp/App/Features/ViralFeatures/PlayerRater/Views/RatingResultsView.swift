@@ -10,6 +10,7 @@ struct RatingResultsView: View {
     @State private var imageScale: CGFloat = 1.1
     @State private var displayScore: Int = 0
     @State private var scoreTimer: Timer?
+    @State private var hasSavedResult = false
 
     var body: some View {
         ZStack {
@@ -89,17 +90,8 @@ struct RatingResultsView: View {
 
                         // Continue/Skip button (secondary action - visible but de-emphasized)
                         Button(action: {
-                            // Track completion
-                            if viewModel.context == .onboarding {
-                                // Onboarding STY Validation funnel completion (step 5)
-                                if let rating = viewModel.rating {
-                                    STYValidationAnalytics.trackCompleted(
-                                        score: rating.overallScore,
-                                        tier: rating.archetype,
-                                        duration: 0  // Duration tracking can be added later if needed
-                                    )
-                                }
-                            } else {
+                            // Track completion (only for Home STY Check, onboarding completion tracked in AppRatingScreen)
+                            if viewModel.context != .onboarding {
                                 // Home STY funnel - mark as completed without premium
                                 if let rating = viewModel.rating {
                                     STYCheckAnalytics.trackCompletedWithoutPremium(
@@ -137,14 +129,23 @@ struct RatingResultsView: View {
             // Track results viewed
             if let rating = viewModel.rating {
                 if viewModel.context == .onboarding {
-                    // Onboarding: Results are shown, funnel completion tracked on Continue button
-                    // (Tracked below when user taps Continue)
+                    // Onboarding STY Validation funnel (step 4 - results viewed)
+                    STYValidationAnalytics.trackResultsViewed(
+                        score: rating.overallScore,
+                        tier: rating.archetype
+                    )
                 } else {
                     // Post-onboarding STY Home funnel (step 5 - results viewed)
                     STYCheckAnalytics.trackResultsViewed(
                         score: rating.overallScore,
                         tier: rating.archetype
                     )
+                }
+
+                // Save result to history (only once per view, skip onboarding)
+                if !hasSavedResult && viewModel.context != .onboarding {
+                    hasSavedResult = true
+                    AnalysisResultsStore.shared.saveSTYCheckResult(rating, photo: viewModel.uploadedImage)
                 }
             }
 

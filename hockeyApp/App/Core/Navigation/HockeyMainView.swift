@@ -160,7 +160,9 @@ struct HockeyMainView: View {
     }
 
     private var showHeaderProCTA: Bool {
-        (selectedTab == 1 || selectedTab == 2) && !monetization.isPremium
+        // Only show "Go Pro" after user has seen a paywall at least once
+        // and they're not already premium
+        monetization.hasSeenPaywall && !monetization.isPremium
     }
 
     private func handleHeaderProCTATap() {

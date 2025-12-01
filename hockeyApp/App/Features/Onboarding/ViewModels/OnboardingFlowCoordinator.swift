@@ -106,7 +106,11 @@ class OnboardingFlowCoordinator: ObservableObject {
     }
 
     func skip() {
-        completeOnboarding()
+        // Skip moves to next page, not complete onboarding
+        // This allows users to skip optional screens while still seeing remaining screens
+        guard !isNavigating else { return }
+        isNavigating = true
+        advanceToNextPage()
     }
 
     // Jump forward by skipping the next page (useful for conditional flows)

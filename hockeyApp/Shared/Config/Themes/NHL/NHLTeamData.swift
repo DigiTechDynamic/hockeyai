@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - NHL Team Data
 // Official colors for all 32 NHL teams with accessibility adaptations
 
-struct NHLTeam {
+struct NHLTeam: Equatable {
     let id: String
     let name: String
     let city: String
@@ -14,17 +14,21 @@ struct NHLTeam {
     let secondaryColor: Color
     let accentColor: Color?
     let logoSymbol: String // SF Symbol fallback
-    
+
     enum Conference: String, CaseIterable {
         case eastern = "Eastern"
         case western = "Western"
     }
-    
+
     enum Division: String, CaseIterable {
         case atlantic = "Atlantic"
         case metropolitan = "Metropolitan"
         case central = "Central"
         case pacific = "Pacific"
+    }
+
+    static func == (lhs: NHLTeam, rhs: NHLTeam) -> Bool {
+        lhs.id == rhs.id
     }
 }
 

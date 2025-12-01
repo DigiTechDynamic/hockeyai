@@ -100,17 +100,6 @@ struct GreenyWelcomeScreen: View {
                 }
                 .padding(.horizontal, theme.spacing.lg)
 
-                // Subheadline
-                Text("AI coaching + Pro ratings built with Greeny")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, theme.spacing.xl)
-                    .opacity(headlineFinished ? 1.0 : 0.0)
-                    .animation(.easeOut(duration: 0.5).delay(0.2), value: headlineFinished)
-                    .padding(.top, 24)
-                    .padding(.horizontal, theme.spacing.xxl)
-
                 // Progress indicator
                 HStack(spacing: 8) {
                     ForEach(0..<5) { index in
@@ -121,20 +110,7 @@ struct GreenyWelcomeScreen: View {
                 }
                 .opacity(appeared ? 1 : 0)
                 .animation(.easeOut(duration: 0.4).delay(0.3), value: appeared)
-                .padding(.top, 20)
-
-                // Social proof badge
-                HStack(spacing: 5) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(theme.primary)
-                    Text("Trusted by 10,000+ players")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(Color.white.opacity(0.6))
-                }
-                .opacity(appeared ? 1 : 0)
-                .animation(.easeOut(duration: 0.4).delay(0.4), value: appeared)
-                .padding(.top, 8)
+                .padding(.top, 32)
 
                 Spacer()
 

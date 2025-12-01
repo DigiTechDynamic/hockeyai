@@ -154,14 +154,3 @@ struct PaywallLegalLinks: View {
         }
     }
 }
-
-// MARK: - Preview
-#Preview("Privacy Policy") {
-    PrivacyPolicySheet()
-}
-
-#Preview("Legal Links") {
-    PaywallLegalLinks()
-        .padding()
-        .background(Color.black)
-}

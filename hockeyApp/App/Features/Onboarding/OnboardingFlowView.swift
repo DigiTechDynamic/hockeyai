@@ -5,7 +5,6 @@ enum OnboardingStep: Int, CaseIterable {
     case greenyWelcome = 0
     case styCheckIntro
     case appRating
-    case appRatingThankYou
     case notificationAsk
 
     var progress: Double {
@@ -29,7 +28,6 @@ struct OnboardingFlowView: View {
             AnyOnboardingPage(GreenyWelcomePage(viewModel: vm)),
             AnyOnboardingPage(STYCheckIntroPage(viewModel: vm)),
             AnyOnboardingPage(AppRatingPage(viewModel: vm)),
-            AnyOnboardingPage(AppRatingThankYouPage(viewModel: vm)),
             AnyOnboardingPage(NotificationAskPage(viewModel: vm))
         ]
 
@@ -68,32 +66,13 @@ struct OnboardingFlowView: View {
         .preferredColorScheme(.dark)
         .edgesIgnoringSafeArea(.bottom)
         .onAppear {
-            // Track onboarding started
-            AnalyticsManager.shared.trackFunnelStep(
-                funnel: "onboarding",
-                step: "started",
-                stepNumber: 0,
-                totalSteps: OnboardingStep.allCases.count
-            )
-
-            // Track first screen view (onChange won't fire for index 0)
-            AnalyticsManager.shared.trackFunnelStep(
-                funnel: "onboarding",
-                step: "welcome",
-                stepNumber: 1,
-                totalSteps: OnboardingStep.allCases.count
-            )
+            // Track onboarding funnel: started → welcome
+            OnboardingAnalytics.trackStart()
+            OnboardingAnalytics.trackWelcome()
 
             // Set completion handlers
             coordinator.onComplete = {
-                // Track completion
-                AnalyticsManager.shared.trackFunnelStep(
-                    funnel: "onboarding",
-                    step: "completed",
-                    stepNumber: OnboardingStep.allCases.count,
-                    totalSteps: OnboardingStep.allCases.count
-                )
-
+                OnboardingAnalytics.trackCompletion()
                 viewModel.completeOnboarding()
                 withAnimation {
                     hasCompletedOnboarding = true
@@ -101,14 +80,7 @@ struct OnboardingFlowView: View {
             }
 
             viewModel.onComplete = {
-                // Track completion
-                AnalyticsManager.shared.trackFunnelStep(
-                    funnel: "onboarding",
-                    step: "completed",
-                    stepNumber: OnboardingStep.allCases.count,
-                    totalSteps: OnboardingStep.allCases.count
-                )
-
+                OnboardingAnalytics.trackCompletion()
                 withAnimation {
                     hasCompletedOnboarding = true
                 }
@@ -116,31 +88,6 @@ struct OnboardingFlowView: View {
 
             // Notify coordinator that page appeared
             coordinator.pageDidAppear()
-        }
-        .onChange(of: coordinator.currentPageIndex) { newIndex in
-            // Track screen views
-            let step = OnboardingStep.allCases[newIndex]
-            let screenName: String
-
-            switch step {
-            case .greenyWelcome:
-                screenName = "welcome"
-            case .styCheckIntro:
-                screenName = "sty_check"
-            case .appRating:
-                screenName = "rating"
-            case .appRatingThankYou:
-                screenName = "thank_you"
-            case .notificationAsk:
-                screenName = "notifications"
-            }
-
-            AnalyticsManager.shared.trackFunnelStep(
-                funnel: "onboarding",
-                step: screenName,
-                stepNumber: newIndex + 1,
-                totalSteps: OnboardingStep.allCases.count
-            )
         }
         // Player Rater full-screen modal
         .fullScreenCover(isPresented: $viewModel.showingPlayerRater) {
@@ -159,17 +106,9 @@ struct OnboardingFlowView: View {
             STYCheckIntroScreen(viewModel: viewModel, coordinator: coordinator)
         case .appRating:
             AppRatingScreen(viewModel: viewModel, coordinator: coordinator)
-        case .appRatingThankYou:
-            AppRatingThankYouScreen(viewModel: viewModel, coordinator: coordinator)
         case .notificationAsk:
             NotificationAskScreen(viewModel: viewModel, coordinator: coordinator)
         }
     }
 }
 
-// MARK: - Preview
-struct OnboardingFlowView_Previews: PreviewProvider {
-    static var previews: some View {
-        OnboardingFlowView(hasCompletedOnboarding: .constant(false))
-    }
-}

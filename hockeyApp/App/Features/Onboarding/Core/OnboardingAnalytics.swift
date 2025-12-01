@@ -1,13 +1,12 @@
 import Foundation
 
 // MARK: - Onboarding Analytics
-// ⚠️ NEVER MODIFY THIS FILE - Reusable across ALL apps
+// 6-step funnel: started → welcome → sty_check → rating_screen → notification_screen → completed
+// This allows tracking drop-offs at every screen
 
-/// Centralized analytics tracking for onboarding flow
-/// Automatically tracks funnel progression, screen views, and completion
 enum OnboardingAnalytics {
 
-    // MARK: - Funnel Tracking
+    // MARK: - Funnel Tracking (6 Steps)
 
     /// Track when onboarding starts (Step 1)
     static func trackStart() {
@@ -15,11 +14,11 @@ enum OnboardingAnalytics {
             funnel: "onboarding",
             step: "started",
             stepNumber: 1,
-            totalSteps: 5
+            totalSteps: 6
         )
 
         #if DEBUG
-        print("[Onboarding] 📊 Started (Step 1/5)")
+        print("[Onboarding] 📊 Started (Step 1/6)")
         #endif
     }
 
@@ -29,77 +28,91 @@ enum OnboardingAnalytics {
             funnel: "onboarding",
             step: "welcome",
             stepNumber: 2,
-            totalSteps: 5
+            totalSteps: 6
         )
 
         #if DEBUG
-        print("[Onboarding] 📊 Welcome screen (Step 2/5)")
+        print("[Onboarding] 📊 Welcome screen (Step 2/6)")
         #endif
     }
 
-    /// Track when a specific screen is viewed
-    /// Called automatically by OnboardingFlowContainer
-    static func trackScreenView(screenID: String, screenIndex: Int, totalScreens: Int) {
+    /// Track when user reaches STY Check screen (Step 3)
+    static func trackSTYCheck() {
         AnalyticsManager.shared.trackFunnelStep(
             funnel: "onboarding",
-            step: screenID,
-            stepNumber: screenIndex + 1,
-            totalSteps: totalScreens
-        )
-
-        #if DEBUG
-        print("[Onboarding] 📊 Screen viewed: \(screenID) (\(screenIndex + 1)/\(totalScreens))")
-        #endif
-    }
-
-    /// Track when user continues from a screen
-    /// Call this from onContinue closure in OnboardingConfiguration
-    static func trackContinue(screenID: String, stepNumber: Int, totalSteps: Int) {
-        AnalyticsManager.shared.trackFunnelStep(
-            funnel: "onboarding",
-            step: "\(screenID)_continue",
-            stepNumber: stepNumber,
-            totalSteps: totalSteps
-        )
-
-        #if DEBUG
-        print("[Onboarding] 📊 Continued from: \(screenID)")
-        #endif
-    }
-
-    /// Track when user enters STY Validation during onboarding (Step 3)
-    static func trackSTYValidation() {
-        AnalyticsManager.shared.trackFunnelStep(
-            funnel: "onboarding",
-            step: "sty_validation",
+            step: "sty_check",
             stepNumber: 3,
-            totalSteps: 5
+            totalSteps: 6
         )
 
         #if DEBUG
-        print("[Onboarding] 📊 STY Validation started (Step 3/5)")
+        print("[Onboarding] 📊 STY Check screen (Step 3/6)")
         #endif
     }
 
-    /// Track when user reaches notifications screen (Step 4)
-    static func trackNotifications() {
+    /// Track when user reaches app rating screen (Step 4)
+    static func trackRatingScreen() {
         AnalyticsManager.shared.trackFunnelStep(
             funnel: "onboarding",
-            step: "notifications",
+            step: "rating_screen",
             stepNumber: 4,
-            totalSteps: 5
+            totalSteps: 6
         )
 
         #if DEBUG
-        print("[Onboarding] 📊 Notifications screen (Step 4/5)")
+        print("[Onboarding] 📊 Rating screen (Step 4/6)")
         #endif
     }
 
-    /// Track when onboarding is completed (Step 5)
+    /// Track rating pre-prompt response (supplementary event)
+    static func trackRatingResponse(accepted: Bool) {
+        AnalyticsManager.shared.track(
+            eventName: "onboarding_rating_response",
+            properties: [
+                "accepted": accepted,
+                "response": accepted ? "accepted" : "skipped"
+            ]
+        )
+
+        #if DEBUG
+        print("[Onboarding] 📊 Rating response: \(accepted ? "accepted" : "skipped")")
+        #endif
+    }
+
+    /// Track when user reaches notification screen (Step 5)
+    static func trackNotificationScreen() {
+        AnalyticsManager.shared.trackFunnelStep(
+            funnel: "onboarding",
+            step: "notification_screen",
+            stepNumber: 5,
+            totalSteps: 6
+        )
+
+        #if DEBUG
+        print("[Onboarding] 📊 Notification screen (Step 5/6)")
+        #endif
+    }
+
+    /// Track notification permission response (supplementary event)
+    static func trackNotificationResponse(allowed: Bool) {
+        AnalyticsManager.shared.track(
+            eventName: "onboarding_notification_response",
+            properties: [
+                "allowed": allowed,
+                "response": allowed ? "allowed" : "denied"
+            ]
+        )
+
+        #if DEBUG
+        print("[Onboarding] 📊 Notification response: \(allowed ? "allowed" : "denied")")
+        #endif
+    }
+
+    /// Track when onboarding is completed (Step 6)
     static func trackCompletion() {
         AnalyticsManager.shared.trackFunnelCompleted(
             funnel: "onboarding",
-            totalSteps: 5,
+            totalSteps: 6,
             metadata: ["completed": true]
         )
 
@@ -108,37 +121,7 @@ enum OnboardingAnalytics {
         UserDefaults.standard.set(Date(), forKey: "onboardingCompletedDate")
 
         #if DEBUG
-        print("[Onboarding] ✅ Completed (Step 5/5)")
-        #endif
-    }
-
-    /// Track if user skips onboarding
-    static func trackSkip(atScreenIndex: Int, totalScreens: Int, screenID: String) {
-        AnalyticsManager.shared.trackFunnelDropoff(
-            funnel: "onboarding",
-            step: screenID,
-            stepNumber: atScreenIndex + 1,
-            totalSteps: totalScreens,
-            reason: "user_skipped"
-        )
-
-        #if DEBUG
-        print("[Onboarding] ⏭️ Skipped at: \(screenID)")
-        #endif
-    }
-
-    /// Track if user drops off (exits without completing)
-    static func trackDropoff(atScreenIndex: Int, totalScreens: Int, screenID: String) {
-        AnalyticsManager.shared.trackFunnelDropoff(
-            funnel: "onboarding",
-            step: screenID,
-            stepNumber: atScreenIndex + 1,
-            totalSteps: totalScreens,
-            reason: "user_exited"
-        )
-
-        #if DEBUG
-        print("[Onboarding] ❌ Dropped off at: \(screenID)")
+        print("[Onboarding] ✅ Completed (Step 6/6)")
         #endif
     }
 }

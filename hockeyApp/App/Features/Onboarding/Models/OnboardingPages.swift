@@ -90,36 +90,6 @@ struct AppRatingPage: OnboardingPageProtocol {
     }
 }
 
-// MARK: - App Rating Thank You Page
-struct AppRatingThankYouPage: OnboardingPageProtocol {
-    let viewModel: OnboardingViewModel
-
-    var pageID: String { "app_rating_thank_you" }
-
-    var navigationRules: NavigationRules {
-        NavigationRules(
-            allowsSwipeBack: false,
-            allowsSwipeForward: false,
-            showsBackButton: false,
-            showsSkipButton: false,
-            showsProgressBar: true,
-            transitionDuration: 0.3
-        )
-    }
-
-    var autoNavigationConfig: AutoNavigationConfig? {
-        .after(seconds: 2.0) // Auto-advance after 2 seconds!
-    }
-
-    func canNavigateBack() -> Bool {
-        false
-    }
-
-    func onNavigateForward(completion: @escaping (NavigationResult) -> Void) {
-        completion(.proceed)
-    }
-}
-
 // MARK: - Notification Ask Page
 struct NotificationAskPage: OnboardingPageProtocol {
     let viewModel: OnboardingViewModel

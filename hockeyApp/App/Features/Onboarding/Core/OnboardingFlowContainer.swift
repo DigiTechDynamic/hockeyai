@@ -80,18 +80,14 @@ struct OnboardingFlowContainer: View {
         }
     }
 
-    // MARK: - Analytics Tracking
+    // MARK: - Screen Lifecycle
 
     private func handleScreenAppear(index: Int, screenID: String) {
-        OnboardingAnalytics.trackScreenView(
-            screenID: screenID,
-            screenIndex: index,
-            totalScreens: screens.count
-        )
+        // Analytics tracked per-screen (welcome, sty_check, etc.)
     }
 
     private func handleScreenDisappear(index: Int) {
-        // Optional: Track time spent on screen
+        // No-op
     }
 }
 

@@ -6,7 +6,16 @@ struct PlayerRaterFlowView: View {
     @StateObject private var viewModel: PlayerRaterViewModel
     @Environment(\.presentationMode) var presentationMode
 
+    // Saved results state
+    @State private var showingSavedResults = false
+    @State private var savedResult: StoredSTYCheckResult?
+
+    private let context: RaterContext
+    private let onComplete: (PlayerRating?) -> Void
+
     init(context: RaterContext, onComplete: @escaping (PlayerRating?) -> Void) {
+        self.context = context
+        self.onComplete = onComplete
         let vm = PlayerRaterViewModel(context: context)
         _viewModel = StateObject(wrappedValue: vm)
 
@@ -15,6 +24,33 @@ struct PlayerRaterFlowView: View {
     }
 
     var body: some View {
+        Group {
+            // Only show saved results for homeScreen context (not onboarding)
+            if showingSavedResults, let saved = savedResult, context == .homeScreen {
+                SavedSTYCheckResultsView(
+                    result: saved,
+                    onNewCheck: {
+                        showingSavedResults = false
+                        savedResult = nil
+                    },
+                    onExit: {
+                        onComplete(nil)
+                    }
+                )
+            } else {
+                normalFlowView
+            }
+        }
+        .onAppear {
+            // Check for saved results when view appears (only for homeScreen context)
+            if context == .homeScreen, let latestResult = AnalysisResultsStore.shared.latestSTYResult {
+                savedResult = latestResult
+                showingSavedResults = true
+            }
+        }
+    }
+
+    private var normalFlowView: some View {
         VStack(spacing: 0) {
             // Content based on step (no fixed header)
             ZStack {

@@ -94,11 +94,14 @@ struct NotificationAskScreen: View {
                     PermissionPromptCard(
                         onDontAllow: {
                             HapticManager.shared.playImpact(style: .light)
+                            OnboardingAnalytics.trackNotificationResponse(allowed: false)
                             coordinator.navigateForward()
                         },
                         onAllow: {
                             viewModel.requestNotificationPermission { _ in
                                 HapticManager.shared.playNotification(type: .success)
+                                // Track as allowed since user tapped "Allow"
+                                OnboardingAnalytics.trackNotificationResponse(allowed: true)
                                 coordinator.navigateForward()
                             }
                         }
@@ -153,6 +156,9 @@ struct NotificationAskScreen: View {
             Spacer(minLength: theme.spacing.lg)
         }
         .onAppear {
+            // Track funnel step
+            OnboardingAnalytics.trackNotificationScreen()
+
             withAnimation {
                 animateIn = true
             }

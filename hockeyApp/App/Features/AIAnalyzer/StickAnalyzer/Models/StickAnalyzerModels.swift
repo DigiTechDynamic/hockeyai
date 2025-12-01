@@ -223,3 +223,63 @@ struct StickProfile {
 
 // MARK: - Error Types
 // StickAnalyzer now uses the unified AIAnalyzerError from Shared/Errors
+
+// MARK: - Stick Analyzer Saved State
+/// Persistable state for resuming the Stick Analyzer flow
+struct StickAnalyzerSavedState: PersistableFlowState {
+    static let flowType: FlowType = .stickAnalyzer
+
+    // Flow progress
+    let currentStageId: String
+    let savedAt: Date
+
+    // User data
+    let playerProfile: PlayerProfile?
+    let bodyScanImagePath: String?  // Relative path to saved body scan image
+    let questionnaire: ShootingQuestionnaire?
+
+    // Flow stage data (selections made)
+    let shootingPriority: String?
+    let primaryShot: String?
+    let shootingZone: String?
+
+    /// Check if the state is still valid (media files exist)
+    func isValid() -> Bool {
+        // If we have a body scan path, verify the file exists
+        if let path = bodyScanImagePath {
+            return FlowStateManager.shared.mediaFileExists(at: path)
+        }
+        // State without body scan is still valid
+        return true
+    }
+
+    /// Create state from current view model and flow state
+    @MainActor
+    static func from(
+        currentStageId: String,
+        viewModel: StickAnalyzerViewModel,
+        flowState: AIFlowState
+    ) -> StickAnalyzerSavedState {
+        // Save body scan image if present
+        var bodyScanPath: String? = nil
+        if let bodyScan = viewModel.bodyScanResult,
+           let image = bodyScan.loadImage() {
+            bodyScanPath = FlowStateManager.shared.saveImage(
+                image,
+                identifier: "body_scan",
+                flowType: .stickAnalyzer
+            )
+        }
+
+        return StickAnalyzerSavedState(
+            currentStageId: currentStageId,
+            savedAt: Date(),
+            playerProfile: viewModel.playerProfile,
+            bodyScanImagePath: bodyScanPath,
+            questionnaire: viewModel.questionnaire,
+            shootingPriority: flowState.getData(for: "shooting-priority") as? String,
+            primaryShot: flowState.getData(for: "primary-shot") as? String,
+            shootingZone: flowState.getData(for: "shooting-zone") as? String
+        )
+    }
+}

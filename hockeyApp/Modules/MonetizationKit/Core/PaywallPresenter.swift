@@ -76,6 +76,11 @@ struct PaywallPresenter: View {
             await loadProducts()
         }
         .onAppear {
+            // Mark that user has seen a paywall (enables "Go Pro" button in header)
+            if !monetization.hasSeenPaywall {
+                monetization.hasSeenPaywall = true
+            }
+
             let variant = PaywallRegistry.getDesign(for: source).id
             AnalyticsManager.shared.track(
                 eventName: MonetizationConfig.paywallViewedEvent,

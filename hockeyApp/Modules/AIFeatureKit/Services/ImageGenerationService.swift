@@ -16,65 +16,99 @@ enum ImageGenerationProvider: String, CaseIterable {
 }
 
 // MARK: - Gemini Rate Limit Tracker
-/// Tracks when Gemini API returns 429 (rate limit exceeded) for the SHARED API key
+/// Tracks when Gemini API returns 429 (rate limit exceeded) for EACH API key separately
 /// The 250 RPD limit is per API key (shared across ALL users), not per device
-/// Strategy: Always try Gemini first, fall back to fal.ai on 429, remember until midnight PT
+/// Strategy: Try Key 1 → Key 2 → fal.ai, remember 429s until midnight PT
 /// Thread-safe for concurrent access from multiple requests
 final class GeminiRateLimitTracker {
     static let shared = GeminiRateLimitTracker()
 
     private let userDefaults = UserDefaults.standard
-    private let rateLimitHitKey = "gemini_rate_limit_hit_date"
+
+    /// Keys for tracking each API key's rate limit status
+    private let rateLimitKey1 = "gemini_rate_limit_hit_date_key1"
+    private let rateLimitKey2 = "gemini_rate_limit_hit_date_key2"
 
     /// Serial queue for thread-safe access
     private let queue = DispatchQueue(label: "com.hockeyapp.gemini.ratelimit", qos: .userInitiated)
 
     private init() {}
 
-    /// Whether we've received a 429 today (API key is at limit for all users)
-    /// Thread-safe read
-    var isAtLimit: Bool {
+    // MARK: - Key Index Management
+
+    /// Get the next available key index (0 = key1, 1 = key2, nil = all exhausted)
+    /// Returns the first key that hasn't hit rate limit today
+    func getNextAvailableKeyIndex() -> Int? {
         return queue.sync {
-            guard let hitDate = userDefaults.object(forKey: rateLimitHitKey) as? Date else {
-                return false
+            let keys = AppSecrets.shared.allGeminiAPIKeys
+            guard !keys.isEmpty else { return nil }
+
+            // Check Key 1 first
+            if keys.count >= 1 && !isKeyAtLimit(keyIndex: 0) {
+                return 0
             }
 
-            // Check if the hit was today (Pacific Time - when Gemini quotas reset)
-            guard let pacificTimeZone = TimeZone(identifier: "America/Los_Angeles") else {
-                // Fallback: if timezone fails, assume not at limit to avoid blocking users
-                print("⚠️ [GeminiRateLimitTracker] Failed to get Pacific timezone, defaulting to not at limit")
-                return false
+            // Check Key 2
+            if keys.count >= 2 && !isKeyAtLimit(keyIndex: 1) {
+                return 1
             }
 
-            var calendar = Calendar.current
-            calendar.timeZone = pacificTimeZone
-
-            let today = calendar.startOfDay(for: Date())
-            let hitDay = calendar.startOfDay(for: hitDate)
-
-            // If hit was today or in the future (clock skew protection), we're still at limit
-            if hitDay >= today {
-                return true
-            } else {
-                // New day - clear the flag
-                userDefaults.removeObject(forKey: rateLimitHitKey)
-                print("🔄 [GeminiRateLimitTracker] New day (Pacific Time) - Gemini limit reset, trying Gemini again")
-                return false
-            }
+            // All keys exhausted
+            return nil
         }
     }
 
-    /// For backwards compatibility
-    var shouldPreferFallback: Bool {
-        return isAtLimit
+    /// Check if a specific key is at its rate limit (internal, called within queue)
+    private func isKeyAtLimit(keyIndex: Int) -> Bool {
+        let key = keyIndex == 0 ? rateLimitKey1 : rateLimitKey2
+
+        guard let hitDate = userDefaults.object(forKey: key) as? Date else {
+            return false
+        }
+
+        guard let pacificTimeZone = TimeZone(identifier: "America/Los_Angeles") else {
+            print("⚠️ [GeminiRateLimitTracker] Failed to get Pacific timezone")
+            return false
+        }
+
+        var calendar = Calendar.current
+        calendar.timeZone = pacificTimeZone
+
+        let today = calendar.startOfDay(for: Date())
+        let hitDay = calendar.startOfDay(for: hitDate)
+
+        if hitDay >= today {
+            return true
+        } else {
+            // New day - clear this key's flag
+            userDefaults.removeObject(forKey: key)
+            print("🔄 [GeminiRateLimitTracker] New day - Key \(keyIndex + 1) limit reset")
+            return false
+        }
     }
 
-    /// Record a rate limit error (429) - remember that API key is exhausted for today
-    /// Thread-safe write
-    func recordRateLimitHit() {
+    /// Whether ALL keys have hit their limit today
+    var allKeysExhausted: Bool {
+        return getNextAvailableKeyIndex() == nil
+    }
+
+    /// For backwards compatibility - true if no Gemini keys available
+    var isAtLimit: Bool {
+        return allKeysExhausted
+    }
+
+    var shouldPreferFallback: Bool {
+        return allKeysExhausted
+    }
+
+    /// Record a rate limit error (429) for a specific key
+    func recordRateLimitHit(forKeyIndex keyIndex: Int) {
         queue.sync {
-            // Only record if not already recorded today (avoid redundant writes)
-            if let existingDate = userDefaults.object(forKey: rateLimitHitKey) as? Date,
+            let key = keyIndex == 0 ? rateLimitKey1 : rateLimitKey2
+            let keyNumber = keyIndex + 1
+
+            // Only record if not already recorded today
+            if let existingDate = userDefaults.object(forKey: key) as? Date,
                let pacificTimeZone = TimeZone(identifier: "America/Los_Angeles") {
                 var calendar = Calendar.current
                 calendar.timeZone = pacificTimeZone
@@ -82,29 +116,90 @@ final class GeminiRateLimitTracker {
                 let existingDay = calendar.startOfDay(for: existingDate)
 
                 if existingDay >= today {
-                    // Already recorded today, skip
-                    return
+                    return // Already recorded today
                 }
             }
 
-            userDefaults.set(Date(), forKey: rateLimitHitKey)
-            print("⚠️ [GeminiRateLimitTracker] 429 received! API key at daily limit (250 RPD). Using fal.ai until midnight PT.")
+            userDefaults.set(Date(), forKey: key)
+
+            // Check if we have another key available
+            let totalKeys = AppSecrets.shared.allGeminiAPIKeys.count
+            let otherKeyAvailable = totalKeys > 1 && !isKeyAtLimit(keyIndex: keyIndex == 0 ? 1 : 0)
+
+            if otherKeyAvailable {
+                print("⚠️ [GeminiRateLimitTracker] Key \(keyNumber) hit 429! Switching to Key \(keyIndex == 0 ? 2 : 1)")
+            } else {
+                print("⚠️ [GeminiRateLimitTracker] Key \(keyNumber) hit 429! All Gemini keys exhausted, using fal.ai until midnight PT")
+            }
         }
     }
 
-    /// No longer tracking individual requests - limit is shared across all users
-    func recordRequest() {
-        // No-op: We can't track shared API key usage across all users
-        // Just rely on 429 detection
+    /// Legacy method - records hit for key 1 (backwards compatibility)
+    func recordRateLimitHit() {
+        recordRateLimitHit(forKeyIndex: 0)
     }
 
-    /// Clear the rate limit flag (for testing or manual reset)
+    /// No longer tracking individual requests
+    func recordRequest() {
+        // No-op
+    }
+
+    /// Clear rate limit flags for all keys (for testing)
     func reset() {
         queue.sync {
-            userDefaults.removeObject(forKey: rateLimitHitKey)
-            print("🔄 [GeminiRateLimitTracker] Rate limit flag cleared manually")
+            userDefaults.removeObject(forKey: rateLimitKey1)
+            userDefaults.removeObject(forKey: rateLimitKey2)
+            print("🔄 [GeminiRateLimitTracker] All rate limit flags cleared")
         }
     }
+
+    /// Clear rate limit for a specific key (for testing)
+    func reset(keyIndex: Int) {
+        queue.sync {
+            let key = keyIndex == 0 ? rateLimitKey1 : rateLimitKey2
+            userDefaults.removeObject(forKey: key)
+            print("🔄 [GeminiRateLimitTracker] Key \(keyIndex + 1) rate limit flag cleared")
+        }
+    }
+
+    // MARK: - Debug/Testing Methods
+
+    #if DEBUG
+    /// Simulate a 429 for a specific key (for testing fallback behavior)
+    func simulateRateLimitHit(forKeyIndex keyIndex: Int) {
+        print("🧪 [GeminiRateLimitTracker] SIMULATING 429 for Key \(keyIndex + 1)")
+        recordRateLimitHit(forKeyIndex: keyIndex)
+    }
+
+    /// Get current status of all keys (for debugging)
+    func debugStatus() -> String {
+        return queue.sync {
+            let keys = AppSecrets.shared.allGeminiAPIKeys
+            var status = "=== Gemini Rate Limit Status ===\n"
+            status += "Total keys configured: \(keys.count)\n"
+
+            for i in 0..<max(keys.count, 2) {
+                let isAtLimit = i < keys.count ? isKeyAtLimit(keyIndex: i) : false
+                let hasKey = i < keys.count
+                status += "Key \(i + 1): \(hasKey ? (isAtLimit ? "❌ EXHAUSTED" : "✅ Available") : "⚪ Not configured")\n"
+            }
+
+            if let nextKey = getNextAvailableKeyIndex() {
+                status += "Next key to use: Key \(nextKey + 1)\n"
+            } else {
+                status += "Next key to use: None (falling back to fal.ai)\n"
+            }
+
+            status += "================================"
+            return status
+        }
+    }
+
+    /// Print status to console
+    func printStatus() {
+        print(debugStatus())
+    }
+    #endif
 }
 
 // MARK: - Image Generation Service
@@ -117,18 +212,31 @@ final class ImageGenerationService {
     struct Configuration {
         let provider: ImageGenerationProvider
         let geminiBaseURL: String
-        let geminiAPIKey: String?
+        let geminiAPIKeys: [String]  // Array of Gemini keys for fallback
         let falAPIKey: String?
         let modelName: String
+
+        /// Legacy single key access (returns first key)
+        var geminiAPIKey: String? {
+            geminiAPIKeys.first
+        }
 
         init(provider: ImageGenerationProvider = .falAI,
              geminiBaseURL: String = "https://generativelanguage.googleapis.com/v1beta",
              geminiAPIKey: String? = nil,
+             geminiAPIKeys: [String]? = nil,
              falAPIKey: String? = nil,
              modelName: String = "gemini-3-pro-image-preview") {
             self.provider = provider
             self.geminiBaseURL = geminiBaseURL
-            self.geminiAPIKey = geminiAPIKey
+            // Support both single key and array of keys
+            if let keys = geminiAPIKeys, !keys.isEmpty {
+                self.geminiAPIKeys = keys
+            } else if let key = geminiAPIKey {
+                self.geminiAPIKeys = [key]
+            } else {
+                self.geminiAPIKeys = []
+            }
             self.falAPIKey = falAPIKey
             self.modelName = modelName
         }
@@ -171,7 +279,8 @@ final class ImageGenerationService {
         case imageDecodingFailed
         case noImagesGenerated
         case imageUploadFailed
-        case rateLimitExceeded  // HTTP 429 - triggers fallback to fal.ai
+        case rateLimitExceeded  // HTTP 429 - triggers fallback to next key/fal.ai
+        case invalidAPIKey      // HTTP 401/403 - key disabled/revoked, triggers fallback
 
         var errorDescription: String? {
             switch self {
@@ -199,6 +308,8 @@ final class ImageGenerationService {
                 return "Failed to upload reference image"
             case .rateLimitExceeded:
                 return "Rate limit exceeded. Trying alternate provider..."
+            case .invalidAPIKey:
+                return "API key is invalid or disabled. Trying alternate provider..."
             }
         }
 
@@ -216,6 +327,28 @@ final class ImageGenerationService {
             default:
                 return false
             }
+        }
+
+        /// Whether this error indicates an invalid/disabled API key that should trigger fallback
+        var isInvalidKeyError: Bool {
+            switch self {
+            case .invalidAPIKey:
+                return true
+            case .apiError(let message):
+                let lowercased = message.lowercased()
+                return lowercased.contains("401") ||
+                       lowercased.contains("403") ||
+                       lowercased.contains("invalid") ||
+                       lowercased.contains("unauthorized") ||
+                       lowercased.contains("forbidden")
+            default:
+                return false
+            }
+        }
+
+        /// Whether this error should trigger a fallback to the next key or provider
+        var shouldTriggerFallback: Bool {
+            return isRateLimitError || isInvalidKeyError
         }
     }
 
@@ -261,42 +394,43 @@ final class ImageGenerationService {
     }
 
     /// Convenience initializer that loads API keys from AppSecrets
-    /// Uses smart provider selection: Gemini first (FREE), fal.ai as fallback ($0.15/image)
+    /// Uses smart provider selection: Gemini keys first (FREE), fal.ai as fallback ($0.15/image)
+    /// Supports multiple Gemini keys with automatic fallback: Key 1 → Key 2 → fal.ai
     convenience init?() {
         let falKey = AppSecrets.shared.falAPIKey
-        let geminiKey = AppSecrets.shared.geminiAPIKey
+        let geminiKeys = AppSecrets.shared.allGeminiAPIKeys
 
         // Must have at least one provider available
-        guard falKey != nil || geminiKey != nil else {
+        guard falKey != nil || !geminiKeys.isEmpty else {
             print("❌ [ImageGenerationService] No API keys found")
             return nil
         }
 
         // Smart provider selection:
-        // - Use Gemini if available AND not at rate limit
-        // - Fall back to fal.ai if Gemini unavailable OR at rate limit
+        // - Use Gemini if any key is available AND not at rate limit
+        // - Fall back to fal.ai if all Gemini keys exhausted
         let provider: ImageGenerationProvider
         let tracker = GeminiRateLimitTracker.shared
 
-        if geminiKey != nil && !tracker.isAtLimit {
+        if !geminiKeys.isEmpty, let nextKeyIndex = tracker.getNextAvailableKeyIndex() {
             provider = .geminiDirect
-            print("✅ [ImageGenerationService] Using Gemini direct (~$0.13/image)")
+            print("✅ [ImageGenerationService] Using Gemini Key \(nextKeyIndex + 1) of \(geminiKeys.count) (~$0.13/image)")
         } else if falKey != nil {
-            if tracker.isAtLimit {
-                print("⚠️ [ImageGenerationService] Gemini hit 429 today, using fal.ai ($0.15/image)")
+            if tracker.allKeysExhausted && !geminiKeys.isEmpty {
+                print("⚠️ [ImageGenerationService] All \(geminiKeys.count) Gemini key(s) hit 429 today, using fal.ai ($0.15/image)")
             } else {
                 print("✅ [ImageGenerationService] Using fal.ai ($0.15/image)")
             }
             provider = .falAI
         } else {
-            // Only Gemini available but at limit - still try Gemini (might work after midnight PT)
+            // Only Gemini available but all keys at limit - still try Gemini (might work after midnight PT)
             provider = .geminiDirect
-            print("⚠️ [ImageGenerationService] Only Gemini available, attempting despite previous 429")
+            print("⚠️ [ImageGenerationService] Only Gemini available, attempting despite previous 429s")
         }
 
         self.init(configuration: Configuration(
             provider: provider,
-            geminiAPIKey: geminiKey,
+            geminiAPIKeys: geminiKeys,
             falAPIKey: falKey
         ))
     }
@@ -304,7 +438,7 @@ final class ImageGenerationService {
     /// Initialize with a specific provider
     convenience init?(provider: ImageGenerationProvider) {
         let falKey = AppSecrets.shared.falAPIKey
-        let geminiKey = AppSecrets.shared.geminiAPIKey
+        let geminiKeys = AppSecrets.shared.allGeminiAPIKeys
 
         switch provider {
         case .falAI:
@@ -313,18 +447,18 @@ final class ImageGenerationService {
                 return nil
             }
         case .geminiDirect:
-            guard geminiKey != nil else {
-                print("❌ [ImageGenerationService] Gemini API key not found")
+            guard !geminiKeys.isEmpty else {
+                print("❌ [ImageGenerationService] No Gemini API keys found")
                 return nil
             }
         }
 
         self.init(configuration: Configuration(
             provider: provider,
-            geminiAPIKey: geminiKey,
+            geminiAPIKeys: geminiKeys,
             falAPIKey: falKey
         ))
-        print("✅ [ImageGenerationService] Initialized with \(provider.displayName)")
+        print("✅ [ImageGenerationService] Initialized with \(provider.displayName) (\(geminiKeys.count) Gemini key(s) available)")
     }
 
     // MARK: - Image Generation
@@ -362,60 +496,88 @@ final class ImageGenerationService {
         }
     }
 
-    /// Generate with Gemini, automatically falling back to fal.ai on rate limit
+    /// Generate with Gemini, automatically trying all keys before falling back to fal.ai
+    /// Fallback chain: Gemini Key 1 → Gemini Key 2 → fal.ai
     private func generateImageWithGeminiDirectAndFallback(
         prompt: String,
         parameters: GenerationParameters,
         referenceImages: [UIImage],
         completion: @escaping (Result<UIImage, Error>) -> Void
     ) {
+        let tracker = GeminiRateLimitTracker.shared
+
+        // Get the next available key index
+        guard let keyIndex = tracker.getNextAvailableKeyIndex(),
+              keyIndex < configuration.geminiAPIKeys.count else {
+            // All Gemini keys exhausted, try fal.ai
+            if configuration.falAPIKey != nil {
+                print("⚠️ [ImageGenerationService] All Gemini keys exhausted, using fal.ai...")
+                generateImageWithFalAI(
+                    prompt: prompt,
+                    parameters: parameters,
+                    referenceImages: referenceImages,
+                    completion: completion
+                )
+            } else {
+                print("❌ [ImageGenerationService] All Gemini keys exhausted and no fal.ai fallback")
+                completion(.failure(ServiceError.rateLimitExceeded))
+            }
+            return
+        }
+
+        let apiKey = configuration.geminiAPIKeys[keyIndex]
+        print("🔑 [ImageGenerationService] Using Gemini Key \(keyIndex + 1) of \(configuration.geminiAPIKeys.count)")
+
         generateImageWithGeminiDirect(
             prompt: prompt,
             parameters: parameters,
-            referenceImages: referenceImages
+            referenceImages: referenceImages,
+            apiKey: apiKey,
+            keyIndex: keyIndex
         ) { [weak self] result in
             guard let self = self else { return }
 
             switch result {
             case .success(let image):
-                // Success! Record the request and return
-                GeminiRateLimitTracker.shared.recordRequest()
+                // Success!
                 completion(.success(image))
 
             case .failure(let error):
-                // Check if this is a rate limit error
-                let isRateLimit: Bool
+                // Check if this error should trigger fallback to next key/provider
+                let shouldFallback: Bool
+                let reason: String
+
                 if let serviceError = error as? ServiceError {
-                    isRateLimit = serviceError.isRateLimitError
+                    shouldFallback = serviceError.shouldTriggerFallback
+                    reason = serviceError.isInvalidKeyError ? "invalid/disabled" : "rate limited"
                 } else {
-                    // Check error message for rate limit indicators
                     let errorMessage = error.localizedDescription.lowercased()
-                    isRateLimit = errorMessage.contains("429") ||
-                                  errorMessage.contains("rate limit") ||
-                                  errorMessage.contains("quota") ||
-                                  errorMessage.contains("resource_exhausted")
+                    let isRateLimit = errorMessage.contains("429") ||
+                                      errorMessage.contains("rate limit") ||
+                                      errorMessage.contains("quota") ||
+                                      errorMessage.contains("resource_exhausted")
+                    let isInvalidKey = errorMessage.contains("401") ||
+                                       errorMessage.contains("403") ||
+                                       errorMessage.contains("unauthorized") ||
+                                       errorMessage.contains("forbidden")
+                    shouldFallback = isRateLimit || isInvalidKey
+                    reason = isInvalidKey ? "invalid/disabled" : "rate limited"
                 }
 
-                if isRateLimit {
-                    // Rate limit hit - record it and try fal.ai fallback
-                    GeminiRateLimitTracker.shared.recordRateLimitHit()
+                if shouldFallback {
+                    // Mark this key as exhausted (skip for the rest of the day)
+                    tracker.recordRateLimitHit(forKeyIndex: keyIndex)
 
-                    // Check if fal.ai is available for fallback
-                    if self.configuration.falAPIKey != nil {
-                        print("🔄 [ImageGenerationService] Gemini rate limited, falling back to fal.ai...")
-                        self.generateImageWithFalAI(
-                            prompt: prompt,
-                            parameters: parameters,
-                            referenceImages: referenceImages,
-                            completion: completion
-                        )
-                    } else {
-                        // No fallback available
-                        print("❌ [ImageGenerationService] Rate limited and no fal.ai fallback available")
-                        completion(.failure(ServiceError.rateLimitExceeded))
-                    }
+                    // Try again - will use next available key or fall back to fal.ai
+                    print("🔄 [ImageGenerationService] Key \(keyIndex + 1) \(reason), trying next option...")
+                    self.generateImageWithGeminiDirectAndFallback(
+                        prompt: prompt,
+                        parameters: parameters,
+                        referenceImages: referenceImages,
+                        completion: completion
+                    )
                 } else {
-                    // Not a rate limit error, pass through
+                    // Not a fallback-triggering error, pass through
                     completion(.failure(error))
                 }
             }
@@ -590,12 +752,16 @@ final class ImageGenerationService {
         prompt: String,
         parameters: GenerationParameters,
         referenceImages: [UIImage] = [],
+        apiKey: String,
+        keyIndex: Int,
         completion: @escaping (Result<UIImage, Error>) -> Void
     ) {
         generateImageWithRetry(
             prompt: prompt,
             parameters: parameters,
             referenceImages: referenceImages,
+            apiKey: apiKey,
+            keyIndex: keyIndex,
             retryCount: 0,
             maxRetries: Constants.maxRetries,
             completion: completion
@@ -606,11 +772,13 @@ final class ImageGenerationService {
         prompt: String,
         parameters: GenerationParameters,
         referenceImages: [UIImage] = [],
+        apiKey: String,
+        keyIndex: Int,
         retryCount: Int,
         maxRetries: Int,
         completion: @escaping (Result<UIImage, Error>) -> Void
     ) {
-        print("🎨 [ImageGenerationService] Starting Gemini direct image generation...")
+        print("🎨 [ImageGenerationService] Starting Gemini direct image generation (Key \(keyIndex + 1))...")
         print("📝 [ImageGenerationService] Prompt: \(prompt)")
         print("🔧 [ImageGenerationService] Parameters: Aspect Ratio \(parameters.aspectRatio.rawValue), Size: \(parameters.imageSize.rawValue)")
         if !referenceImages.isEmpty {
@@ -624,7 +792,8 @@ final class ImageGenerationService {
             let request = try buildGeminiRequest(
                 prompt: prompt,
                 parameters: parameters,
-                referenceImages: referenceImages
+                referenceImages: referenceImages,
+                apiKey: apiKey
             )
 
             // Execute request
@@ -645,6 +814,8 @@ final class ImageGenerationService {
                                 prompt: prompt,
                                 parameters: parameters,
                                 referenceImages: referenceImages,
+                                apiKey: apiKey,
+                                keyIndex: keyIndex,
                                 retryCount: retryCount + 1,
                                 maxRetries: maxRetries,
                                 completion: completion
@@ -670,9 +841,17 @@ final class ImageGenerationService {
                 // Handle HTTP errors
                 guard (200...299).contains(httpResponse.statusCode) else {
                     // Check specifically for 429 (rate limit)
+                    // Handle rate limit (429)
                     if httpResponse.statusCode == 429 {
-                        print("⚠️ [ImageGenerationService] HTTP 429 - Rate limit exceeded")
+                        print("⚠️ [ImageGenerationService] HTTP 429 - Rate limit exceeded (Key \(keyIndex + 1))")
                         completion(.failure(ServiceError.rateLimitExceeded))
+                        return
+                    }
+
+                    // Handle invalid/disabled API key (401/403)
+                    if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                        print("⚠️ [ImageGenerationService] HTTP \(httpResponse.statusCode) - API key invalid or disabled (Key \(keyIndex + 1))")
+                        completion(.failure(ServiceError.invalidAPIKey))
                         return
                     }
 
@@ -717,11 +896,9 @@ final class ImageGenerationService {
     private func buildGeminiRequest(
         prompt: String,
         parameters: GenerationParameters,
-        referenceImages: [UIImage] = []
+        referenceImages: [UIImage] = [],
+        apiKey: String
     ) throws -> URLRequest {
-        guard let apiKey = configuration.geminiAPIKey else {
-            throw ServiceError.missingAPIKey
-        }
 
         // Build URL for Gemini 3 Pro Image
         guard let url = URL(string: "\(configuration.geminiBaseURL)/models/\(configuration.modelName):generateContent") else {

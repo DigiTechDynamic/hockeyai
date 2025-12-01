@@ -1,6 +1,37 @@
 import SwiftUI
 import Combine
 
+// MARK: - Hockey Card Saved State
+/// Persistable state for resuming Hockey Card creation
+struct HockeyCardSavedState: PersistableFlowState {
+    static let flowType: FlowType = .hockeyCard
+
+    let currentStageId: String  // For protocol conformance - we use "creation" always
+    let savedAt: Date
+
+    // Player info
+    let playerName: String
+    let jerseyNumber: String
+    let position: Position?
+    let photoType: PhotoUploadType?
+
+    // Jersey selection
+    let jerseyOption: JerseyOption?
+    let nhlTeamId: String?  // Store team ID for lookup
+
+    // Photo path
+    let photoPath: String?
+
+    func isValid() -> Bool {
+        // If we have a photo path, verify the file exists
+        if let path = photoPath {
+            return FlowStateManager.shared.mediaFileExists(at: path)
+        }
+        // State without photo is still valid (user hasn't uploaded yet)
+        return true
+    }
+}
+
 // MARK: - Unified Hockey Card Creation View
 /// Streamlined single-screen hockey card creator optimized for conversion
 struct HockeyCardCreationView: View {
@@ -13,6 +44,9 @@ struct HockeyCardCreationView: View {
     @State private var showingPaywall = false
     @State private var showingDailyLimitAlert = false
     @State private var isKeyboardVisible = false
+    // Resume state
+    @State private var showResumePrompt = false
+    @State private var savedStateToResume: HockeyCardSavedState? = nil
 
     var body: some View {
         ZStack {
@@ -77,6 +111,8 @@ struct HockeyCardCreationView: View {
                     playerInfo: viewModel.getPlayerCardInfo(),
                     jerseySelection: jersey,
                     onDismiss: {
+                        // Clear saved state on successful generation
+                        FlowStateManager.shared.clear(.hockeyCard)
                         showingCardGeneration = false
                         onDismiss()
                     }
@@ -95,8 +131,24 @@ struct HockeyCardCreationView: View {
             Text("You've reached your daily limit of 5 cards. Please come back tomorrow!")
         }
         .onAppear {
+            // Check for saved state to resume
+            checkForSavedState()
+
             // Track funnel start (Step 1)
             HockeyCardAnalytics.trackStarted(source: "hockey_card_home")
+        }
+        .sheet(isPresented: $showResumePrompt) {
+            resumePromptSheet
+        }
+        .onChange(of: viewModel.playerPhotos) { _ in
+            // Save state when meaningful progress is made
+            saveFlowStateIfNeeded()
+        }
+        .onChange(of: viewModel.selectedNHLTeam) { _ in
+            saveFlowStateIfNeeded()
+        }
+        .onChange(of: viewModel.selectedJerseyOption) { _ in
+            saveFlowStateIfNeeded()
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -200,92 +252,13 @@ struct HockeyCardCreationView: View {
     }
 
     private var exampleCardsShowcase: some View {
-        ZStack {
-            // Background glow
-            Circle()
-                .fill(theme.primary.opacity(0.15))
-                .frame(width: 280, height: 280)
-                .blur(radius: 40)
-
-            // Stacked example cards (using placeholder since we don't have example images)
-            ZStack {
-                // Back card (left tilt)
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(LinearGradient(
-                        colors: [Color.blue.opacity(0.6), Color.blue.opacity(0.3)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 140, height: 200)
-                    .overlay(
-                        VStack {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.white.opacity(0.5))
-                            Text("NHL")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white.opacity(0.5))
-                        }
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                    .rotationEffect(.degrees(-12))
-                    .offset(x: -50, y: 10)
-
-                // Middle card (right tilt)
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(LinearGradient(
-                        colors: [Color.red.opacity(0.6), Color.red.opacity(0.3)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 140, height: 200)
-                    .overlay(
-                        VStack {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.white.opacity(0.5))
-                            Text("PRO")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white.opacity(0.5))
-                        }
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                    .rotationEffect(.degrees(12))
-                    .offset(x: 50, y: 10)
-
-                // Front card (center)
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(LinearGradient(
-                        colors: [theme.primary.opacity(0.8), theme.primary.opacity(0.4)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 150, height: 210)
-                    .overlay(
-                        VStack(spacing: 8) {
-                            Image(systemName: "person.crop.rectangle.fill")
-                                .font(.system(size: 50))
-                                .foregroundColor(.white)
-                            Text("YOUR CARD")
-                                .font(.system(size: 14, weight: .black))
-                                .foregroundColor(.white)
-                                .tracking(1)
-                        }
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(theme.primary, lineWidth: 2)
-                    )
-                    .shadow(color: theme.primary.opacity(0.5), radius: 20)
-            }
-        }
-        .frame(height: 260)
+        // Hockey card placeholder
+        Image("PlaceholderHockeyCard")
+            .resizable()
+            .scaledToFit()
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.white.opacity(0.15), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 40)
     }
 
     private func statBadge(icon: String, text: String) -> some View {
@@ -784,6 +757,177 @@ struct HockeyCardCreationView: View {
     }
 }
 
+// MARK: - Flow State Persistence
+extension HockeyCardCreationView {
+    /// Check for saved state and show resume prompt if found
+    private func checkForSavedState() {
+        if let savedState = FlowStateManager.shared.load(HockeyCardSavedState.self) {
+            // Only show resume prompt if there's meaningful progress (photo uploaded)
+            if savedState.photoPath != nil {
+                // First restore the data so user sees their progress behind the prompt
+                resumeFromSavedState(savedState)
+
+                // Then show the prompt asking if they want to continue or start fresh
+                savedStateToResume = savedState
+                showResumePrompt = true
+                print("📂 [HockeyCardCreationView] Found saved state with photo - restored and showing prompt")
+            }
+        }
+    }
+
+    /// Save flow state when meaningful progress is made
+    private func saveFlowStateIfNeeded() {
+        // Only save if user has uploaded a photo (meaningful progress)
+        guard !viewModel.playerPhotos.isEmpty else { return }
+
+        // Save photo to persistent storage
+        var photoPath: String? = nil
+        if let photo = viewModel.playerPhotos.first {
+            photoPath = FlowStateManager.shared.saveImage(
+                photo,
+                identifier: "player_photo",
+                flowType: .hockeyCard
+            )
+        }
+
+        let state = HockeyCardSavedState(
+            currentStageId: "creation",
+            savedAt: Date(),
+            playerName: viewModel.playerName,
+            jerseyNumber: viewModel.jerseyNumber,
+            position: viewModel.position,
+            photoType: viewModel.selectedPhotoType,
+            jerseyOption: viewModel.selectedJerseyOption,
+            nhlTeamId: viewModel.selectedNHLTeam?.id,
+            photoPath: photoPath
+        )
+
+        FlowStateManager.shared.save(state)
+    }
+
+    /// Resume from saved state
+    private func resumeFromSavedState(_ savedState: HockeyCardSavedState) {
+        print("▶️ [HockeyCardCreationView] Resuming from saved state")
+
+        // Restore player info
+        viewModel.playerName = savedState.playerName
+        viewModel.jerseyNumber = savedState.jerseyNumber
+        viewModel.position = savedState.position
+        viewModel.selectedPhotoType = savedState.photoType
+
+        // Restore jersey selection
+        viewModel.selectedJerseyOption = savedState.jerseyOption
+        if let teamId = savedState.nhlTeamId {
+            viewModel.selectedNHLTeam = NHLTeams.allTeams.first { $0.id == teamId }
+        }
+
+        // Restore photo
+        if let photoPath = savedState.photoPath,
+           let image = FlowStateManager.shared.loadImage(from: photoPath) {
+            viewModel.playerPhotos = [image]
+        }
+    }
+
+    /// Clear saved state on completion
+    private func clearSavedState() {
+        FlowStateManager.shared.clear(.hockeyCard)
+    }
+
+    /// Resume prompt sheet UI
+    @ViewBuilder
+    private var resumePromptSheet: some View {
+        VStack(spacing: 24) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(theme.primary)
+
+                Text("Continue Your Card?")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(theme.text)
+
+                if let savedState = savedStateToResume {
+                    let timeAgo = FlowStateManager.shared.formattedSaveTime(for: .hockeyCard) ?? "recently"
+
+                    VStack(spacing: 4) {
+                        if !savedState.playerName.isEmpty {
+                            Text("\(savedState.playerName) #\(savedState.jerseyNumber)")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.text)
+                        }
+                        Text("Started \(timeAgo)")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.textSecondary)
+                    }
+                }
+            }
+            .padding(.top, 32)
+
+            // Preview of saved photo
+            if let savedState = savedStateToResume,
+               let photoPath = savedState.photoPath,
+               let image = FlowStateManager.shared.loadImage(from: photoPath) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(theme.primary.opacity(0.5), lineWidth: 2)
+                    )
+            }
+
+            Spacer()
+
+            // Buttons
+            VStack(spacing: 12) {
+                Button(action: {
+                    // Data is already restored, just dismiss
+                    showResumePrompt = false
+                }) {
+                    HStack {
+                        Image(systemName: "play.fill")
+                        Text("Continue")
+                    }
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(theme.primary)
+                    .cornerRadius(theme.cornerRadius)
+                }
+
+                Button(action: {
+                    showResumePrompt = false
+                    // Clear the restored data and saved state
+                    viewModel.playerPhotos = []
+                    viewModel.playerName = ""
+                    viewModel.jerseyNumber = ""
+                    viewModel.position = nil
+                    viewModel.selectedPhotoType = nil
+                    viewModel.selectedJerseyOption = .nhl
+                    viewModel.selectedNHLTeam = nil
+                    FlowStateManager.shared.clear(.hockeyCard)
+                    savedStateToResume = nil
+                    // Reload profile defaults
+                    viewModel.loadProfileDataPublic()
+                }) {
+                    Text("Start Fresh")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(theme.textSecondary)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+        }
+        .background(theme.background)
+        .presentationDetents([.height(420)])
+        .presentationDragIndicator(.visible)
+    }
+}
+
 // MARK: - Position Extension
 extension Position {
     var shortName: String {
@@ -903,6 +1047,15 @@ class HockeyCardCreationViewModel: ObservableObject {
     }
 
     private func loadProfileData() {
+        loadProfileDataInternal()
+    }
+
+    /// Public method to reload profile defaults (used when starting fresh)
+    func loadProfileDataPublic() {
+        loadProfileDataInternal()
+    }
+
+    private func loadProfileDataInternal() {
         if let profileData = UserDefaults.standard.data(forKey: "playerProfile"),
            let profile = try? JSONDecoder().decode(PlayerProfile.self, from: profileData) {
             if let name = profile.name, !name.isEmpty {

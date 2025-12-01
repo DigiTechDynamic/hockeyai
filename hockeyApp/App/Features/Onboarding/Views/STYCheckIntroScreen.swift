@@ -17,7 +17,7 @@ struct STYCheckIntroScreen: View {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
-                // Headline - Direct and clear
+                // Headline - Exclusive/gatekeeping vibe
                 Text("STY Entry Check")
                     .font(.system(size: 42, weight: .black))
                     .foregroundStyle(
@@ -38,54 +38,35 @@ struct STYCheckIntroScreen: View {
                     .animation(.spring(response: 0.5, dampingFraction: 0.8), value: appeared)
                     .padding(.bottom, theme.spacing.sm)
 
-                // Time commitment
-                Text("Pass = Full access")
+                // Exclusivity message
+                Text("Not everyone gets in")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(theme.primary)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.4).delay(0.1), value: appeared)
-                    .padding(.bottom, theme.spacing.lg)
+                    .padding(.bottom, theme.spacing.xl)
 
-                // Subheadline - Simple & direct
-                VStack(spacing: 8) {
-                    Text("Upload any selfie to unlock full access")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(theme.text)
-                        .multilineTextAlignment(.center)
-
-                    Text("Pass = you're in")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(theme.primary)
-                        .multilineTextAlignment(.center)
-                }
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 10)
-                .animation(.easeOut(duration: 0.4).delay(0.2), value: appeared)
-                .padding(.horizontal, theme.spacing.lg)
-                .padding(.bottom, theme.spacing.xl)
+                // Subheadline - gatekeeping vibe
+                Text("Upload a selfie to prove you're a stud")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 10)
+                    .animation(.easeOut(duration: 0.4).delay(0.2), value: appeared)
+                    .padding(.horizontal, theme.spacing.lg)
+                    .padding(.bottom, theme.spacing.xl)
 
                 // Benefits list - centered
                 VStack(alignment: .leading, spacing: theme.spacing.md) {
-                    benefitRow(icon: "🎯", text: "Pass/Validated only")
-                    benefitRow(icon: "🔓", text: "Unlocks full STY + Skill Check")
-                    benefitRow(icon: "📸", text: "Any photo works")
+                    benefitRow(icon: "🎯", text: "Only beauties get validated")
+                    benefitRow(icon: "🔓", text: "Pass = full app access")
+                    benefitRow(icon: "📸", text: "Any selfie works")
                 }
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 10)
                 .animation(.easeOut(duration: 0.4).delay(0.3), value: appeared)
                 .padding(.bottom, theme.spacing.xl)
-
-                // Social proof
-                HStack(spacing: 5) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(theme.primary)
-                    Text("12,847 players got validated this week")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(theme.textSecondary)
-                }
-                .opacity(appeared ? 1 : 0)
-                .animation(.easeOut(duration: 0.4).delay(0.4), value: appeared)
 
                 Spacer()
 
@@ -94,10 +75,10 @@ struct STYCheckIntroScreen: View {
                     HapticManager.shared.playImpact(style: .medium)
 
                     // Track in both funnels:
-                    // Funnel 1: High-level onboarding (step 3)
-                    OnboardingAnalytics.trackSTYValidation()
+                    // Funnel 1: Onboarding (step 3)
+                    OnboardingAnalytics.trackSTYCheck()
 
-                    // Funnel 2: Detailed STY validation flow (step 1)
+                    // Funnel 2: STY validation flow (step 1)
                     STYValidationAnalytics.trackStarted()
 
                     coordinator.navigateForward()
@@ -136,13 +117,3 @@ struct STYCheckIntroScreen: View {
     }
 }
 
-// MARK: - Preview
-struct STYCheckIntroScreen_Previews: PreviewProvider {
-    static var previews: some View {
-        STYCheckIntroScreen(
-            viewModel: OnboardingViewModel(),
-            coordinator: OnboardingFlowCoordinator(pages: [])
-        )
-        .preferredColorScheme(.dark)
-    }
-}

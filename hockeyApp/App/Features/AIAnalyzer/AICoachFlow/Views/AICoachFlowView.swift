@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - AI Coach Flow Wrapper
 class AICoachFlowWrapper: ObservableObject {
     let flow: AICoachAnalysisFlow
-    
+
     init(shotType: ShotType? = nil) {
         self.flow = AICoachFlowConfig.buildFlow(for: shotType)
     }
@@ -27,16 +27,19 @@ struct AICoachFlowView: View {
     @State private var monetizationGranted = false
     @State private var pendingMonetizedAction: (() -> Void)?
     @State private var interceptedValidationNav = false
+    // Resume state
+    @State private var showResumePrompt = false
+    @State private var savedStateToResume: AICoachSavedState? = nil
 
     // Progress estimation
     // Smart progress estimator removed; using simple time-based progress
 
     // Optional pre-selected shot type
     let preSelectedShotType: ShotType?
-    
+
     // Completion handler for analysis result
     let onAnalysisComplete: ((AICoachAnalysisResult) -> Void)?
-    
+
     init(preSelectedShotType: ShotType? = nil,
          onAnalysisComplete: ((AICoachAnalysisResult) -> Void)? = nil) {
         self.preSelectedShotType = preSelectedShotType
@@ -202,9 +205,14 @@ struct AICoachFlowView: View {
                 // Track funnel progress
                 if let stageId = newStage {
                     trackFunnelProgress(for: stageId)
+                    // Save state at key checkpoints
+                    saveFlowStateIfNeeded(stageId: stageId, flowState: flowState)
                 }
             }
             .onAppear {
+                // Check for saved state to resume
+                checkForSavedState(flowState: flowState)
+
                 // Track funnel start
                 AnalyticsManager.shared.trackFunnelStep(
                     funnel: "ai_coach",
@@ -219,6 +227,9 @@ struct AICoachFlowView: View {
                         trackFunnelProgress(for: stageId)
                     }
                 }
+            }
+            .sheet(isPresented: $showResumePrompt) {
+                resumePromptSheet(flowState: flowState)
             }
             .onDisappear {
                 validationTask?.cancel()
@@ -603,5 +614,149 @@ struct AICoachFlowView: View {
         default:
             return ("unknown", 0)
         }
+    }
+
+    // MARK: - Flow State Persistence
+
+    /// Check for saved state and show resume prompt if found
+    private func checkForSavedState(flowState: AIFlowState) {
+        if let savedState = FlowStateManager.shared.load(AICoachSavedState.self) {
+            savedStateToResume = savedState
+            showResumePrompt = true
+            print("📂 [AICoachFlowView] Found saved state at stage: \(savedState.currentStageId)")
+        }
+    }
+
+    /// Save flow state at key checkpoints
+    private func saveFlowStateIfNeeded(stageId: String, flowState: AIFlowState) {
+        // Save state after meaningful progress (not on processing/results/validation)
+        let savableStages = ["shot-type-selection", "player-profile", "front-net-capture", "side-angle-capture"]
+
+        guard savableStages.contains(stageId) else { return }
+
+        let state = AICoachSavedState.from(
+            currentStageId: stageId,
+            flowState: flowState
+        )
+
+        FlowStateManager.shared.save(state)
+    }
+
+    /// Resume from saved state
+    private func resumeFromSavedState(_ savedState: AICoachSavedState, flowState: AIFlowState) {
+        print("▶️ [AICoachFlowView] Resuming from stage: \(savedState.currentStageId)")
+
+        // Restore shot type selection
+        if let shotType = savedState.selectedShotType {
+            flowState.setData(shotType, for: "selected-shot-type")
+            // Also set the string selection for the UI
+            let shotId: String = {
+                switch shotType {
+                case .wristShot: return "wrist"
+                case .slapShot: return "slap"
+                case .backhandShot: return "backhand"
+                case .snapShot: return "snapshot"
+                }
+            }()
+            flowState.setData(shotId, for: "shot-type-selection")
+        }
+
+        // Restore player profile
+        if let profile = savedState.playerProfile {
+            flowState.setData(profile, for: "player-profile")
+        }
+
+        // Restore front net video
+        if let frontPath = savedState.frontNetVideoPath,
+           let videoURL = FlowStateManager.shared.getMediaURL(for: frontPath) {
+            let mediaData = MediaStageData(videos: [videoURL])
+            flowState.setData(mediaData, for: "front-net-capture")
+        }
+
+        // Restore side angle video
+        if let sidePath = savedState.sideAngleVideoPath,
+           let videoURL = FlowStateManager.shared.getMediaURL(for: sidePath) {
+            let mediaData = MediaStageData(videos: [videoURL])
+            flowState.setData(mediaData, for: "side-angle-capture")
+        }
+
+        // Navigate to the saved stage
+        if let targetStage = flowState.flow.stages.first(where: { $0.id == savedState.currentStageId }) {
+            flowState.currentStage = targetStage
+        }
+
+        // Clear the saved state since we're resuming
+        FlowStateManager.shared.clear(.aiCoach)
+    }
+
+    /// Clear saved state on completion
+    private func clearSavedStateOnCompletion() {
+        FlowStateManager.shared.clear(.aiCoach)
+    }
+
+    /// Resume prompt sheet UI
+    @ViewBuilder
+    private func resumePromptSheet(flowState: AIFlowState) -> some View {
+        VStack(spacing: 24) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(theme.primary)
+
+                Text("Continue Where You Left Off?")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(theme.text)
+
+                if let savedState = savedStateToResume {
+                    let stageName = FlowStateManager.shared.getReadableStageInfo(for: .aiCoach) ?? savedState.currentStageId
+                    let timeAgo = FlowStateManager.shared.formattedSaveTime(for: .aiCoach) ?? "recently"
+
+                    Text("You were at \"\(stageName)\" (\(timeAgo))")
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.top, 32)
+
+            Spacer()
+
+            // Buttons
+            VStack(spacing: 12) {
+                Button(action: {
+                    showResumePrompt = false
+                    if let savedState = savedStateToResume {
+                        resumeFromSavedState(savedState, flowState: flowState)
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "play.fill")
+                        Text("Continue")
+                    }
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(theme.primary)
+                    .cornerRadius(theme.cornerRadius)
+                }
+
+                Button(action: {
+                    showResumePrompt = false
+                    FlowStateManager.shared.clear(.aiCoach)
+                    savedStateToResume = nil
+                }) {
+                    Text("Start Fresh")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(theme.textSecondary)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+        }
+        .background(theme.background)
+        .presentationDetents([.height(320)])
+        .presentationDragIndicator(.visible)
     }
 }
